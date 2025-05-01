@@ -23,11 +23,11 @@ const PostForm = () => {
           onCompleted: (imageData) => {
             if (imageData.addPostImage.errors.length > 0) {
               setError(`Failed to upload image: ${imageData.addPostImage.errors.join(', ')}`);
+              setIsUploading(false);
             } else {
               // Image uploaded successfully
               setIsUploading(false);
-              refetchPosts();
-              resetForm();
+              resetForm(); // Reset the form only once here
             }
           },
           onError: (error) => {
@@ -46,8 +46,7 @@ const PostForm = () => {
       } else {
         // If no image to upload, just reset the form
         setIsUploading(false);
-        refetchPosts();
-        resetForm();
+        resetForm(); // Reset the form only once here
       }
     },
     onError: (error) => {
@@ -57,10 +56,7 @@ const PostForm = () => {
   });
 
   const [addPostImage] = useMutation(ADD_POST_IMAGE_MUTATION, {
-    refetchQueries: [{ query: GET_FEED_POSTS }],
-    onCompleted: () => {
-      resetForm();
-    },
+    refetchQueries: [{ query: GET_FEED_POSTS }], // This already refetches the posts after upload
     onError: (error) => {
       setError(`Failed to upload image: ${error.message}`);
       setIsUploading(false);
@@ -68,13 +64,32 @@ const PostForm = () => {
   });
 
   const resetForm = () => {
+    // Clear text content
     setContent('');
+    
+    // Clear image data
     setImage(null);
     setImagePreview(null);
+    
+    // Reset upload state
     setIsUploading(false);
+    
+    // Clear error messages
+    setError('');
+    
+    // Reset file input to allow uploading the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    
+    // Add a short delay for visual feedback that the post was submitted
+    setTimeout(() => {
+      // Scroll the textarea back to top if it was scrolled
+      const textarea = document.querySelector('textarea');
+      if (textarea) {
+        textarea.scrollTop = 0;
+      }
+    }, 100);
   };
 
   const handleSubmit = (e) => {
@@ -84,8 +99,17 @@ const PostForm = () => {
       return;
     }
 
+    // Clear any previous errors
+    setError('');
+    
+    // Set uploading state to show feedback to user
     setIsUploading(true);
-    createPost({ variables: { content } });
+    
+    // Submit the post
+    createPost({ 
+      variables: { content },
+      refetchQueries: [{ query: GET_FEED_POSTS }] // Ensure feed is refreshed even if no image
+    });
   };
 
   const handleImageChange = (e) => {

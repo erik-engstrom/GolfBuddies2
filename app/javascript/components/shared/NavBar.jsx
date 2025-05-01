@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApolloClient, useMutation } from '@apollo/client';
 import { LOGOUT_MUTATION } from '../../graphql/mutations';
+import { CurrentUserContext } from '../../app/CurrentUserContext';
 import UserSearch from './UserSearch';
 
-const NavBar = ({ currentUser }) => {
+const NavBar = () => {
+  const { currentUser } = useContext(CurrentUserContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const client = useApolloClient();

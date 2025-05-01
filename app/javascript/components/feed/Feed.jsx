@@ -1,11 +1,10 @@
-import React from 'react';
-import { useQuery } from '@apollo/client';
-import { CURRENT_USER_QUERY } from '../../graphql/queries';
+import React, { useContext } from 'react';
+import { CurrentUserContext } from '../../app/CurrentUserContext';
 import PostForm from './PostForm';
 import PostList from './PostList';
 
 const Feed = () => {
-  const { loading, error, data } = useQuery(CURRENT_USER_QUERY);
+  const { currentUser, loading, error } = useContext(CurrentUserContext);
   
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -18,8 +17,6 @@ const Feed = () => {
       Error loading feed: {error.message}
     </div>
   );
-
-  const currentUser = data?.me;
   
   return (
     <div className="max-w-4xl mx-auto p-4">

@@ -1,7 +1,8 @@
 import React from 'react';
 
 const MessageItem = ({ message, currentUser, formatTime }) => {
-  const isFromCurrentUser = message.sender.id === currentUser.id;
+  // Add null check to avoid the error when currentUser or message.sender is undefined
+  const isFromCurrentUser = currentUser && message && message.sender && message.sender.id === currentUser.id;
   
   return (
     <div 

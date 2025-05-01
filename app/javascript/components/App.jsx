@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import { CURRENT_USER_QUERY } from '../graphql/queries';
+import { CurrentUserProvider, CurrentUserContext } from '../app/CurrentUserContext';
 
 // Import page components
 import Login from './auth/Login';
@@ -22,32 +23,7 @@ const App = () => {
     setIsAuthenticated(!!token);
   }, []);
   
-  // Query current user info if authenticated
-  const { data: userData, refetch: refetchUserData } = useQuery(CURRENT_USER_QUERY, {
-    skip: !isAuthenticated,
-    fetchPolicy: 'network-only', // Always get fresh data from the server
-    pollInterval: 30000 // Refresh every 30 seconds to keep badge counts updated
-  });
-  
-  // Set up a refresh of user data when this component mounts
-  useEffect(() => {
-    if (isAuthenticated) {
-      // Force a refresh of the user data when the app initializes
-      refetchUserData();
-      
-      // Also refresh when the tab becomes visible again
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-          refetchUserData();
-        }
-      };
-      
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      };
-    }
-  }, [isAuthenticated, refetchUserData]);
+  // The CurrentUserContext will handle refreshing the user data
   
   const handleLogin = (token) => {
     console.log("Login successful with token", token);
@@ -56,39 +32,57 @@ const App = () => {
     window.location.href = '/';
   };
   
-  return (
-    <div className="min-h-screen bg-fairway-50">
-      {isAuthenticated && userData?.me && <NavBar currentUser={userData.me} />}
-      <div className="container mx-auto px-4 py-6">
-        <Routes>
-          <Route path="/login" element={
-            isAuthenticated ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
-          } />
-          
-          <Route path="/signup" element={
-            isAuthenticated ? <Navigate to="/" /> : <Signup onLogin={handleLogin} />
-          } />
-          
-          <Route path="/" element={
-            isAuthenticated ? <Feed currentUser={userData?.me} /> : <Navigate to="/login" />
-          } />
-          
-          <Route path="/profile" element={
-            isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />
-          } />
-          
-          <Route path="/users/:id" element={
-            isAuthenticated ? <UserProfilePage /> : <Navigate to="/login" />
-          } />
-          
-          <Route path="/messages" element={
-            isAuthenticated ? <Inbox currentUser={userData?.me} /> : <Navigate to="/login" />
-          } />
-          
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+  const AppContent = () => {
+    const { currentUser, loading } = useContext(CurrentUserContext);
+    
+    if (isAuthenticated && loading) {
+      return (
+        <div className="min-h-screen bg-fairway-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fairway-600"></div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="min-h-screen bg-fairway-50">
+        {isAuthenticated && currentUser && <NavBar currentUser={currentUser} />}
+        <div className="container mx-auto px-4 py-6">
+          <Routes>
+            <Route path="/login" element={
+              isAuthenticated ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
+            } />
+            
+            <Route path="/signup" element={
+              isAuthenticated ? <Navigate to="/" /> : <Signup onLogin={handleLogin} />
+            } />
+            
+            <Route path="/" element={
+              isAuthenticated ? <Feed /> : <Navigate to="/login" />
+            } />
+            
+            <Route path="/profile" element={
+              isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />
+            } />
+            
+            <Route path="/users/:id" element={
+              isAuthenticated ? <UserProfilePage /> : <Navigate to="/login" />
+            } />
+            
+            <Route path="/messages" element={
+              isAuthenticated ? <Inbox /> : <Navigate to="/login" />
+            } />
+            
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    );
+  };
+  
+  return (
+    <CurrentUserProvider>
+      <AppContent />
+    </CurrentUserProvider>
   );
 };
 
