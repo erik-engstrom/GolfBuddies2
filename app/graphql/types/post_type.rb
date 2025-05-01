@@ -26,7 +26,17 @@ module Types
     
     def image_url
       if object.image.attached?
-        Rails.application.routes.url_helpers.rails_blob_url(object.image)
+        # Add host configuration for URL generation
+        begin
+          Rails.application.routes.url_helpers.rails_blob_url(
+            object.image, 
+            host: Rails.application.config.active_storage.default_url_options[:host] || "localhost",
+            port: Rails.application.config.active_storage.default_url_options[:port] || 3000
+          )
+        rescue => e
+          Rails.logger.error("Error generating image URL: #{e.message}")
+          nil
+        end
       end
     end
   end

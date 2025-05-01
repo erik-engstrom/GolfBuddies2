@@ -47,7 +47,7 @@ const NavBar = ({ currentUser }) => {
       // Reset Apollo Client store
       client.resetStore();
       
-      // Redirect to login page
+      // Redirect to login page after logout
       navigate('/login');
     },
     onError: (error) => {
@@ -60,7 +60,22 @@ const NavBar = ({ currentUser }) => {
   });
 
   const handleLogout = () => {
+    // First remove the token
+    localStorage.removeItem('golfBuddiesToken');
+    
+    // Reset Apollo Client store
+    client.resetStore();
+    
+    // Execute the logout mutation
     logout();
+    
+    // Force navigation to login page
+    navigate('/login');
+    
+    // As an additional safety measure, reload the page after a brief delay
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
   };
 
   const toggleDropdown = () => {

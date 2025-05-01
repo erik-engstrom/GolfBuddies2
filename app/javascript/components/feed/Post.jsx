@@ -97,11 +97,14 @@ const Post = ({ post, refetchPosts }) => {
       <div className="mb-4">
         <p className="text-gray-800">{post.content}</p>
         {post.imageUrl && (
-          <img 
-            src={post.imageUrl} 
-            alt="Post attachment" 
-            className="mt-3 rounded-lg max-h-96 w-auto"
-          />
+          <div className="mt-3 overflow-hidden rounded-lg bg-gray-100">
+            <img 
+              src={post.imageUrl} 
+              alt="Post attachment" 
+              className="w-full max-h-96 object-contain"
+              loading="lazy" 
+            />
+          </div>
         )}
       </div>
       

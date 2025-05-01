@@ -53,6 +53,7 @@ export const CREATE_POST_MUTATION = gql`
         id
         content
         createdAt
+        imageUrl
         user {
           id
           fullName
@@ -105,8 +106,8 @@ export const UPDATE_PROFILE_PICTURE_MUTATION = gql`
 `;
 
 export const ADD_POST_IMAGE_MUTATION = gql`
-  mutation AddPostImage($postId: ID!, $image: Upload!) {
-    addPostImage(postId: $postId, image: $image) {
+  mutation AddPostImage($post_id: ID!, $image: Upload!) {
+    addPostImage(input: {postId: $post_id, image: $image}) {
       post {
         id
         imageUrl

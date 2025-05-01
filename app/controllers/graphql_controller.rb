@@ -1,27 +1,49 @@
 # frozen_string_literal: true
 
 class GraphqlController < ApplicationController
-  # Temporarily skip CSRF protection during development
-  skip_before_action :verify_authenticity_token
+  # If accessing from outside this domain, nullify the session
+  # This allows for outside API access while preventing CSRF attacks
+  # but you'll have to authenticate your user separately
+  protect_from_forgery with: :null_session
 
   def execute
     variables = prepare_variables(params[:variables])
     query = params[:query]
     operation_name = params[:operationName]
     context = {
-      # Set current_user based on JWT token
       current_user: current_user,
     }
+    
+    # Add detailed debug information for file uploads
+    Rails.logger.info("GraphQL Operation: #{operation_name}")
+    if variables && variables.is_a?(Hash)
+      Rails.logger.info("Variables: #{variables.keys.join(', ')}")
+      variables.each do |key, value|
+        if value.is_a?(ActionDispatch::Http::UploadedFile)
+          Rails.logger.info("File upload detected: #{key} - #{value.class.name}, content_type: #{value.content_type}, size: #{value.size}")
+        end
+      end
+    end
+    
+    # Use GolfBuddies2Schema instead of GolfBuddiesSchema
     result = GolfBuddies2Schema.execute(query, variables: variables, context: context, operation_name: operation_name)
+    
+    # Check if there were any errors in the result
+    if result && result["errors"].present?
+      Rails.logger.error("GraphQL errors: #{result["errors"].inspect}")
+    end
+    
     render json: result
   rescue StandardError => e
+    Rails.logger.error("GraphQL execution error: #{e.message}")
+    Rails.logger.error(e.backtrace.join("\n"))
     raise e unless Rails.env.development?
     handle_error_in_development(e)
   end
 
   private
 
-  # Handle variables in form data, JSON body, or a blank value
+  # Handle variables in params
   def prepare_variables(variables_param)
     case variables_param
     when String
@@ -33,34 +55,26 @@ class GraphqlController < ApplicationController
     when Hash
       variables_param
     when ActionController::Parameters
-      variables_param.to_unsafe_hash # GraphQL-Ruby will validate name and type of incoming variables.
+      variables_param.to_unsafe_hash
     when nil
       {}
-    else
-      raise ArgumentError, "Unexpected parameter: #{variables_param}"
     end
   end
 
-  # Get current user from token
   def current_user
-    return nil unless request.headers['Authorization']
+    # Find user by auth token
+    token = request.headers['Authorization']&.split(' ')&.last || 
+            params[:token] ||
+            params[:graphql]&.dig(:token)
     
-    token = request.headers['Authorization'].split(' ').last
     return nil unless token
-    
+
     begin
-      decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base, true, { algorithm: 'HS256' })
-      user_id = decoded_token.first['user_id']
-      User.find_by(id: user_id)
+      decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base).first
+      User.find_by(id: decoded_token['user_id'])
     rescue JWT::DecodeError
       nil
     end
-  end
-  
-  # Check if request is authenticated with JWT
-  def authenticated_request?
-    # Skip CSRF for requests with valid JWT token
-    request.headers['Authorization'].present? && current_user.present?
   end
 
   def handle_error_in_development(e)
