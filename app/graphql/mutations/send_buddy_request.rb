@@ -18,7 +18,7 @@ module Mutations
 
       # Find the receiver
       receiver = User.find_by(id: receiver_id)
-      
+
       unless receiver
         return {
           buddy_request: nil,

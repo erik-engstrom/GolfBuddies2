@@ -94,7 +94,7 @@ export const TOGGLE_LIKE_MUTATION = gql`
 // File upload mutations
 export const UPDATE_PROFILE_PICTURE_MUTATION = gql`
   mutation UpdateProfilePicture($profilePicture: Upload!) {
-    updateProfilePicture(profilePicture: $profilePicture) {
+    updateProfilePicture(input: { profilePicture: $profilePicture }) {
       user {
         id
         profilePictureUrl
@@ -119,7 +119,7 @@ export const ADD_POST_IMAGE_MUTATION = gql`
 // Buddy system mutations
 export const SEND_BUDDY_REQUEST_MUTATION = gql`
   mutation SendBuddyRequest($receiverId: ID!) {
-    sendBuddyRequest(receiverId: $receiverId) {
+    sendBuddyRequest(input: {receiverId: $receiverId}) {
       buddyRequest {
         id
         status
@@ -139,7 +139,7 @@ export const SEND_BUDDY_REQUEST_MUTATION = gql`
 
 export const RESPOND_TO_BUDDY_REQUEST_MUTATION = gql`
   mutation RespondToBuddyRequest($buddyRequestId: ID!, $accept: Boolean!) {
-    respondToBuddyRequest(buddyRequestId: $buddyRequestId, accept: $accept) {
+    respondToBuddyRequest(input: {buddyRequestId: $buddyRequestId, accept: $accept}) {
       buddyRequest {
         id
         status
@@ -160,7 +160,7 @@ export const RESPOND_TO_BUDDY_REQUEST_MUTATION = gql`
 // Messaging mutations
 export const SEND_MESSAGE_MUTATION = gql`
   mutation SendMessage($receiverId: ID!, $content: String!) {
-    sendMessage(receiverId: $receiverId, content: $content) {
+    sendMessage(input: {receiverId: $receiverId, content: $content}) {
       message {
         id
         content
@@ -187,6 +187,15 @@ export const MARK_MESSAGE_AS_READ_MUTATION = gql`
         id
         read
       }
+      errors
+    }
+  }
+`;
+
+export const LOGOUT_MUTATION = gql`
+  mutation Logout {
+    logout {
+      success
       errors
     }
   }

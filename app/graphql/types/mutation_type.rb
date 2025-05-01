@@ -5,6 +5,7 @@ module Types
     # Authentication mutations
     field :sign_up, mutation: Mutations::SignUp
     field :sign_in, mutation: Mutations::SignIn
+    field :logout, mutation: Mutations::Logout
     
     # Post mutations
     field :create_post, mutation: Mutations::CreatePost
@@ -18,6 +19,7 @@ module Types
     # Messaging mutations
     field :send_message, mutation: Mutations::SendMessage
     field :mark_message_as_read, mutation: Mutations::MarkMessageAsRead
+    field :mark_all_messages_as_read, mutation: Mutations::MarkAllMessagesAsRead
     
     # File upload mutations
     field :update_profile_picture, mutation: Mutations::UpdateProfilePicture

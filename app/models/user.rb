@@ -40,6 +40,13 @@ class User < ApplicationRecord
   def unread_messages_count
     received_messages.where(read: false).count
   end
+
+  # Returns a hash: { buddy_id => count }
+  def unread_messages_count_by_buddy
+    received_messages.where(read: false)
+      .group(:sender_id)
+      .count
+  end
   
   # Helper method for displaying user's full name
   def full_name

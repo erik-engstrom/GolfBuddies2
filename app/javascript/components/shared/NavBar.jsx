@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useApolloClient } from '@apollo/client';
+import { useApolloClient, useMutation } from '@apollo/client';
+import { LOGOUT_MUTATION } from '../../graphql/mutations';
+import UserSearch from './UserSearch';
 
 const NavBar = ({ currentUser }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -37,15 +39,28 @@ const NavBar = ({ currentUser }) => {
     };
   }, [dropdownOpen, notificationsOpen]);
 
+  const [logout] = useMutation(LOGOUT_MUTATION, {
+    onCompleted: () => {
+      // Clear the auth token from localStorage
+      localStorage.removeItem('golfBuddiesToken');
+      
+      // Reset Apollo Client store
+      client.resetStore();
+      
+      // Redirect to login page
+      navigate('/login');
+    },
+    onError: (error) => {
+      console.error('Logout error:', error);
+      // Even if the server call fails, we want to log out the user on the client side
+      localStorage.removeItem('golfBuddiesToken');
+      client.resetStore();
+      navigate('/login');
+    }
+  });
+
   const handleLogout = () => {
-    // Clear the auth token from localStorage
-    localStorage.removeItem('authToken');
-    
-    // Reset Apollo Client store
-    client.resetStore();
-    
-    // Redirect to login page
-    navigate('/login');
+    logout();
   };
 
   const toggleDropdown = () => {
@@ -85,6 +100,9 @@ const NavBar = ({ currentUser }) => {
 
           {currentUser && (
             <div className="flex items-center">
+              {/* User Search Component */}
+              <UserSearch />
+              
               {/* Messages */}
               <Link 
                 to="/messages" 
@@ -179,7 +197,7 @@ const NavBar = ({ currentUser }) => {
                       {currentUser.fullName}
                     </div>
                     <Link
-                      to={`/profile/${currentUser.id}`}
+                      to="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Your Profile

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMutation } from '@apollo/client';
+import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { TOGGLE_LIKE_MUTATION } from '../../graphql/mutations';
 
@@ -23,26 +24,29 @@ const CommentItem = ({ comment, refetchPosts }) => {
   };
 
   return (
-    <div className="bg-gray-50 p-3 rounded-lg">
-      <div className="flex items-start">
+    <div className="bg-gray-50 p-3 rounded-lg">      <div className="flex items-start">
         <div className="flex-shrink-0 mr-2">
-          {comment.user.profilePictureUrl ? (
-            <img 
-              src={comment.user.profilePictureUrl} 
-              alt={comment.user.fullName} 
-              className="w-8 h-8 rounded-full"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-fairway-300 flex items-center justify-center">
-              <span className="text-fairway-800 font-semibold text-sm">
-                {comment.user.fullName.charAt(0)}
-              </span>
-            </div>
-          )}
+          <Link to={`/users/${comment.user.id}`}>
+            {comment.user.profilePictureUrl ? (
+              <img 
+                src={comment.user.profilePictureUrl}
+                alt={comment.user.fullName}
+                className="w-8 h-8 rounded-full"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-fairway-300 flex items-center justify-center">
+                <span className="text-fairway-800 font-semibold text-sm">
+                  {comment.user.fullName.charAt(0)}
+                </span>
+              </div>
+            )}
+          </Link>
         </div>
         
         <div className="flex-1">
-          <h4 className="font-semibold text-fairway-800 text-sm">{comment.user.fullName}</h4>
+          <Link to={`/users/${comment.user.id}`} className="hover:underline">
+            <h4 className="font-semibold text-fairway-800 text-sm">{comment.user.fullName}</h4>
+          </Link>
           <p className="text-gray-800">{comment.content}</p>
           <div className="flex items-center mt-1">
             <p className="text-xs text-gray-500 mr-4">

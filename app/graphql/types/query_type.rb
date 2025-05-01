@@ -39,6 +39,11 @@ module Types
     field :messages_with_user, [Types::MessageType], null: false, description: "Returns messages between the current user and another user" do
       argument :user_id, ID, required: true
     end
+    
+    # Search queries
+    field :search_users, [Types::UserType], null: false, description: "Search for users by name" do
+      argument :query, String, required: true
+    end
 
     def me
       context[:current_user]
@@ -90,6 +95,20 @@ module Types
       else
         []
       end
+    end
+    
+    def search_users(query:)
+      return [] if query.blank? || !context[:current_user]
+      
+      # Search for users by first_name, last_name, or the combination (full_name)
+      # Using ILIKE for case-insensitive search (for PostgreSQL)
+      # You might need to change it to LIKE if using MySQL or other databases
+      search_term = "%#{query.downcase}%"
+      
+      User.where("LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ?", search_term, search_term)
+          .or(User.where("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", search_term))
+          .where.not(id: context[:current_user].id) # Exclude the current user from results
+          .limit(20) # Limit the number of results for performance
     end
     
     # TODO: remove me

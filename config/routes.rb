@@ -2,6 +2,9 @@ Rails.application.routes.draw do
   # GraphQL API endpoint
   post "/graphql", to: "graphql#execute"
   
+  # Mount ActionCable for WebSockets
+  mount ActionCable.server => "/cable"
+  
   # Mount GraphiQL in development
   if Rails.env.development?
     mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql"

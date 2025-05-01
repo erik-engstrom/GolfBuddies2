@@ -13,6 +13,34 @@ export const CURRENT_USER_QUERY = gql`
       playingStyle
       profilePictureUrl
       unreadMessagesCount
+      unreadMessagesCountByBuddy
+      buddies {
+        id
+        fullName
+        handicap
+        playingStyle
+        profilePictureUrl
+      }
+      sentBuddyRequests {
+        id
+        status
+        createdAt
+        receiver {
+          id
+          fullName
+          profilePictureUrl
+        }
+      }
+      receivedBuddyRequests {
+        id
+        status
+        createdAt
+        sender {
+          id
+          fullName
+          profilePictureUrl
+        }
+      }
     }
   }
 `;
@@ -28,6 +56,17 @@ export const GET_USER_PROFILE = gql`
       handicap
       playingStyle
       profilePictureUrl
+      isBuddy
+      outgoingBuddyRequest {
+        id
+        status
+        createdAt
+      }
+      incomingBuddyRequest {
+        id
+        status
+        createdAt
+      }
       posts {
         id
         content
@@ -116,6 +155,10 @@ export const GET_BUDDIES = gql`
       profilePictureUrl
       unreadMessagesCount
     }
+    me {
+      id
+      unreadMessagesCountByBuddy
+    }
   }
 `;
 
@@ -135,6 +178,19 @@ export const GET_MESSAGES_WITH_USER = gql`
         id
         fullName
       }
+    }
+  }
+`;
+
+// Search queries
+export const SEARCH_USERS = gql`
+  query SearchUsers($query: String!) {
+    searchUsers(query: $query) {
+      id
+      firstName
+      lastName
+      fullName
+      profilePictureUrl
     }
   }
 `;

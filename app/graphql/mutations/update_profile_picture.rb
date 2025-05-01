@@ -1,7 +1,5 @@
 module Mutations
   class UpdateProfilePicture < BaseMutation
-    # Remove the incorrect include statement
-    
     # Define what our mutation returns
     field :user, Types::UserType, null: true
     field :errors, [String], null: false
@@ -22,7 +20,15 @@ module Mutations
       
       # Attach the uploaded file
       begin
-        user.profile_picture.attach(profile_picture)
+        # Convert the uploaded file to an attachable format
+        if profile_picture.respond_to?(:tempfile)
+          # Handle the file properly based on its format
+          user.profile_picture.attach(io: profile_picture.tempfile, 
+                                      filename: profile_picture.original_filename,
+                                      content_type: profile_picture.content_type)
+        else
+          user.profile_picture.attach(profile_picture)
+        end
         
         if user.save
           {

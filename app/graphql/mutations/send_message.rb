@@ -38,6 +38,14 @@ module Mutations
       # The validation in the Message model will check if users are buddies
 
       if message.save
+        # Trigger subscription for new message
+        # Updated to remove 4th argument which is no longer supported in GraphQL Ruby 2.5.4
+        GolfBuddies2Schema.subscriptions.trigger(
+          :message_received, 
+          { user_id: receiver_id }, 
+          message
+        )
+        
         {
           message: message,
           errors: []

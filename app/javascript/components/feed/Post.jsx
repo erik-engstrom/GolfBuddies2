@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@apollo/client';
+import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { TOGGLE_LIKE_MUTATION, CREATE_COMMENT_MUTATION } from '../../graphql/mutations';
 import CommentItem from './CommentItem';
@@ -66,23 +67,27 @@ const Post = ({ post, refetchPosts }) => {
       
       <div className="flex items-start mb-4">
         <div className="flex-shrink-0 mr-3">
-          {post.user.profilePictureUrl ? (
-            <img 
-              src={post.user.profilePictureUrl} 
-              alt={post.user.fullName} 
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-fairway-300 flex items-center justify-center">
-              <span className="text-fairway-800 font-semibold">
-                {post.user.fullName.charAt(0)}
-              </span>
-            </div>
-          )}
+          <Link to={`/users/${post.user.id}`} className="block">
+            {post.user.profilePictureUrl ? (
+              <img 
+                src={post.user.profilePictureUrl} 
+                alt={post.user.fullName} 
+                className="w-10 h-10 rounded-full"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-fairway-300 flex items-center justify-center">
+                <span className="text-fairway-800 font-semibold">
+                  {post.user.fullName.charAt(0)}
+                </span>
+              </div>
+            )}
+          </Link>
         </div>
         
         <div className="flex-1">
-          <h3 className="font-bold text-fairway-800">{post.user.fullName}</h3>
+          <Link to={`/users/${post.user.id}`} className="hover:underline">
+            <h3 className="font-bold text-fairway-800">{post.user.fullName}</h3>
+          </Link>
           <p className="text-sm text-gray-500">
             {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
           </p>
