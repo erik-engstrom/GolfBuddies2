@@ -8,6 +8,9 @@ class Post < ApplicationRecord
   # Active Storage for post images
   has_one_attached :image
   
+  # Notifications
+  has_many :notifications, as: :notifiable, dependent: :destroy
+  
   # Validations
   validates :content, presence: true
   

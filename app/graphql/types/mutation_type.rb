@@ -2,6 +2,10 @@
 
 module Types
   class MutationType < Types::BaseObject
+    # Explicitly require notification mutation files
+    require_relative '../mutations/mark_notification_as_read'
+    require_relative '../mutations/mark_all_notifications_as_read'
+    
     # Authentication mutations
     field :sign_up, mutation: Mutations::SignUp
     field :sign_in, mutation: Mutations::SignIn
@@ -26,5 +30,9 @@ module Types
     # File upload mutations
     field :update_profile_picture, mutation: Mutations::UpdateProfilePicture
     field :add_post_image, mutation: Mutations::AddPostImage
+    
+    # Notification mutations
+    field :mark_notification_as_read, mutation: Mutations::MarkNotificationAsRead
+    field :mark_all_notifications_as_read, mutation: Mutations::MarkAllNotificationsAsRead
   end
 end

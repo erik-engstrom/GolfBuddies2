@@ -4,6 +4,7 @@
 # Clear existing data
 puts "Clearing existing data..."
 Message.destroy_all
+Notification.destroy_all # Clear notifications
 BuddyRequest.destroy_all
 Like.destroy_all
 Comment.destroy_all

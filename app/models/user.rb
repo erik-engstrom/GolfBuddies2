@@ -48,8 +48,15 @@ class User < ApplicationRecord
       .count
   end
   
+  # Notifications
+  has_many :notifications, dependent: :destroy
+  
   # Helper method for displaying user's full name
   def full_name
     "#{first_name} #{last_name}"
+  end
+  
+  def unread_notifications_count
+    notifications.unread.count
   end
 end

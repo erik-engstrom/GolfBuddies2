@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 
 const TopNavbar = ({ currentUser, onLogout }) => {
   const navigate = useNavigate();
-  
+
   if (!currentUser) return null;
-  
+
   return (
     <nav className="bg-fairway-700 text-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          {/* Logo and brand */}
+
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -19,8 +19,7 @@ const TopNavbar = ({ currentUser, onLogout }) => {
               <span className="text-xl font-bold">Golf Buddies</span>
             </Link>
           </div>
-          
-          {/* Navigation Links */}
+
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/" className="hover:text-fairway-300 transition duration-150">
               Feed
@@ -39,7 +38,7 @@ const TopNavbar = ({ currentUser, onLogout }) => {
               </Link>
             </div>
           </div>
-          
+
           {/* User Menu */}
           <div className="flex items-center">
             <div className="relative group">

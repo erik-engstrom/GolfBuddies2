@@ -10,6 +10,22 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import client from './graphql/client';
 import App from './components/App';
 
+// Import notification testing utility in development
+if (process.env.NODE_ENV === 'development') {
+  // Make Apollo client available for testing
+  window.__APOLLO_CLIENT__ = client;
+  
+  // Import testing utilities
+  Promise.all([
+    import('./test_notification'),
+    import('./notification_tester')
+  ]).then(([testModule]) => {
+    if (testModule && testModule.testNotificationSystem) {
+      testModule.testNotificationSystem();
+    }
+  }).catch(err => console.error('Failed to load notification testing utilities:', err));
+}
+
 // Wait for DOM to be loaded before rendering React components
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM loaded, looking for #react-root element");

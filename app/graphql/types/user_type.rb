@@ -21,6 +21,10 @@ module Types
     field :unread_messages_count, Integer, null: false
     field :unread_messages_count_by_buddy, GraphQL::Types::JSON, null: false
     
+    # Notification fields using resolvers
+    field :notifications, resolver: Resolvers::UserNotificationsResolver
+    field :unread_notifications_count, resolver: Resolvers::UserUnreadNotificationsCountResolver
+    
     # Buddy relationship fields
     field :is_buddy, Boolean, null: false
     field :outgoing_buddy_request, Types::BuddyRequestType, null: true

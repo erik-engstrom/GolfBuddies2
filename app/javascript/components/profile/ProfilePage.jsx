@@ -1,12 +1,12 @@
 import React, { useRef } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
-import { CURRENT_USER_QUERY } from '../../graphql/queries';
+import { CURRENT_USER_WITH_NOTIFICATIONS } from '../../graphql/notifications';
 import { UPDATE_PROFILE_PICTURE_MUTATION } from '../../graphql/mutations';
 import BuddyRequestTable from './BuddyRequestTable';
 import BuddiesTable from './BuddiesTable';
 
 const ProfilePage = () => {
-  const { data, loading, error, refetch } = useQuery(CURRENT_USER_QUERY);
+  const { data, loading, error, refetch } = useQuery(CURRENT_USER_WITH_NOTIFICATIONS);
   const [updateProfilePicture, { loading: uploading }] = useMutation(UPDATE_PROFILE_PICTURE_MUTATION, {
     onCompleted: () => refetch(),
   });

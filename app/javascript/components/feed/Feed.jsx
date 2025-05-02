@@ -1,9 +1,33 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { CurrentUserContext } from '../../app/CurrentUserContext';
 import PostListContainer from './PostListContainer';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const Feed = () => {
   const { currentUser, loading, error } = useContext(CurrentUserContext);
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Extract post and comment IDs from URL query parameters
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const postId = queryParams.get('post');
+    const commentId = queryParams.get('comment');
+    
+    // If we have a post ID, log the navigation intent
+    if (postId) {
+      console.log(`Navigating to post: ${postId}, comment: ${commentId || 'none'}`);
+      
+      // We'll let PostListContainer handle the actual scrolling since it has the post elements
+      // But we should clear the URL parameters to avoid reprocessing
+      if (postId || commentId) {
+        // Use setTimeout to ensure this happens after the component is fully rendered
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 100); // Short delay to allow the parameters to be processed
+      }
+    }
+  }, [location, navigate]);
   
   if (loading) return (
     <div className="flex justify-center items-center h-64">

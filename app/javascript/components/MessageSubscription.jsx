@@ -1,7 +1,8 @@
 // Message subscription component for real-time updates
 import React, { useEffect } from 'react';
 import { useSubscription, gql, useApolloClient } from '@apollo/client';
-import { CURRENT_USER_QUERY, GET_BUDDIES } from '../graphql/queries';
+import { GET_BUDDIES } from '../graphql/queries';
+import { CURRENT_USER_WITH_NOTIFICATIONS } from '../graphql/notifications';
 
 // GraphQL subscription for new messages
 const MESSAGE_RECEIVED_SUBSCRIPTION = gql`
@@ -62,8 +63,8 @@ const MessageSubscription = ({ userId, onNewMessage }) => {
   // Helper function to update the unread counts in Apollo cache
   const updateUnreadCountsInCache = (senderId) => {
     try {
-      // Check for CURRENT_USER_QUERY cache to update navbar badge
-      const userData = client.readQuery({ query: CURRENT_USER_QUERY });
+      // Check for CURRENT_USER_WITH_NOTIFICATIONS cache to update navbar badge
+      const userData = client.readQuery({ query: CURRENT_USER_WITH_NOTIFICATIONS });
       
       if (userData?.me) {
         // Create a new unread count by buddy
@@ -85,7 +86,7 @@ const MessageSubscription = ({ userId, onNewMessage }) => {
         
         // Update the cache with new counts
         client.writeQuery({
-          query: CURRENT_USER_QUERY,
+          query: CURRENT_USER_WITH_NOTIFICATIONS,
           data: {
             me: {
               ...userData.me,

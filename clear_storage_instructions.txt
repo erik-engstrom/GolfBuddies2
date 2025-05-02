@@ -1,0 +1,34 @@
+# How to Fix Authentication Issues in GolfBuddies2
+
+## Regular Browser Tab Issues
+
+If you can log in using an incognito/private window but not with your regular browser tab, the issue is likely with cached data in your browser. Follow these steps:
+
+1. Open your regular browser tab to http://localhost:3000
+2. Press F12 or right-click and select "Inspect" to open developer tools
+3. Go to the "Application" tab in developer tools
+4. In the left sidebar, expand "Storage" and select "Local Storage"
+5. Select the domain (should be localhost:3000)
+6. **Click the "Clear all" button** (looks like a 🚫 icon) to remove all localStorage items
+7. Also check and clear "Session Storage" using the same method
+8. If that doesn't work, try clearing cookies as well: expand "Cookies" in the sidebar and delete cookies for localhost
+
+## General Cache Clearing
+9. You can also clear your entire browser cache by:
+   - In Chrome: Settings > Privacy and security > Clear browsing data > Check "Cookies and site data" and "Cached images and files"
+   - In Firefox: Settings > Privacy & Security > Clear Data > Check "Cookies and Site Data" and "Cached Web Content"
+
+## After Clearing Cache
+10. Reload the page by pressing Ctrl+F5 or Cmd+Shift+R (to bypass cache)
+11. Try logging in with these test credentials:
+    - Email: john.doe@example.com
+    - Password: password123
+
+## If Issues Persist
+If you still have issues, open the Console tab in developer tools and paste:
+```javascript
+localStorage.clear();
+sessionStorage.clear();
+console.log("Storage cleared!");
+```
+Then reload the page.

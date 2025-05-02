@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-import { CURRENT_USER_QUERY } from '../graphql/queries';
+import { CURRENT_USER_WITH_NOTIFICATIONS } from '../graphql/notifications';
 import { CurrentUserProvider, CurrentUserContext } from '../app/CurrentUserContext';
 
 // Import page components

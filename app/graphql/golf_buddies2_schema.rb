@@ -1,16 +1,36 @@
 # frozen_string_literal: true
 
+# Load all mutation classes
+require_relative "mutations"
+
 class GolfBuddies2Schema < GraphQL::Schema
   # Define query, mutation, and subscription types
   mutation(Types::MutationType)
   query(Types::QueryType)
   subscription(Types::SubscriptionType)
+  
+  # Explicitly register object types that might not be reached through the root types
+  orphan_types [Types::NotificationType]
+  
+  # Union types are automatically picked up when referenced in object types
 
   # For batch-loading (see https://graphql-ruby.org/dataloader/overview.html)
   use GraphQL::Dataloader
   
   # Add subscriptions support
   use GraphQL::Subscriptions::ActionCableSubscriptions
+  
+  # Configure field name handling for better JavaScript compatibility
+  # This ensures that Ruby snake_case field names are converted to camelCase in GraphQL responses
+  # Different GraphQL gem versions have different ways to configure this
+  if respond_to?(:default_camelize)
+    self.default_camelize = true
+  else
+    # For older versions, monkey patch the field name behavior
+    def self.camelize_field_name(field_name)
+      field_name.to_s.camelize(:lower)
+    end
+  end
 
   # GraphQL-Ruby calls this when something goes wrong while running a query:
   def self.type_error(err, context)
@@ -37,6 +57,8 @@ class GolfBuddies2Schema < GraphQL::Schema
       Types::MessageType
     when BuddyRequest
       Types::BuddyRequestType
+    when Notification
+      Types::NotificationType
     else
       # Fall back to letting each type decide
       if abstract_type.respond_to?(:resolve_type)

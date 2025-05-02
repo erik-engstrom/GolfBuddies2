@@ -20,6 +20,7 @@ module Types
 
     # User queries
     field :me, Types::UserType, null: true, description: "Returns the currently authenticated user"
+    field :current_user, Types::UserType, null: true, description: "Returns the currently authenticated user"
     field :user, Types::UserType, null: true, description: "Returns a user by ID" do
       argument :id, ID, required: true
     end
@@ -46,6 +47,10 @@ module Types
     end
 
     def me
+      context[:current_user]
+    end
+    
+    def current_user
       context[:current_user]
     end
 

@@ -5,7 +5,7 @@ import { useMutation } from '@apollo/client';
 import { CREATE_COMMENT_MUTATION } from '../../graphql/mutations';
 import CommentItem from './CommentItem';
 
-const CommentsSection = ({ post, refetchPosts }) => {
+const CommentsSection = ({ post, refetchPosts, targetCommentId = null }) => {
   const [commentContent, setCommentContent] = useState('');
   const [error, setError] = useState('');
 
@@ -68,7 +68,8 @@ const CommentsSection = ({ post, refetchPosts }) => {
             <CommentItem 
               key={comment.id} 
               comment={comment} 
-              refetchPosts={refetchPosts} 
+              refetchPosts={refetchPosts}
+              isTargetComment={comment.id === targetCommentId}
             />
           ))}
         </div>

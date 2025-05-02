@@ -4,6 +4,7 @@ import { useApolloClient, useMutation } from '@apollo/client';
 import { LOGOUT_MUTATION } from '../../graphql/mutations';
 import { CurrentUserContext } from '../../app/CurrentUserContext';
 import UserSearch from './UserSearch';
+import NotificationBell from './NotificationBell';
 
 const NavBar = () => {
   const { currentUser } = useContext(CurrentUserContext);
@@ -90,15 +91,9 @@ const NavBar = () => {
     if (dropdownOpen) setDropdownOpen(false);
   };
 
-  // Sample notifications - you would fetch these from your backend
-  const notifications = [
-    { id: 1, text: 'John Smith liked your post', isRead: false },
-    { id: 2, text: 'New buddy request from Sarah Jones', isRead: false },
-    { id: 3, text: 'Upcoming tee time tomorrow at 9:00 AM', isRead: true }
-  ];
-
   const unreadMessagesCount = currentUser?.unreadMessagesCount || 0;
-  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
+  const unreadNotificationsCount = currentUser?.unreadNotificationsCount || 0;
+  const notifications = currentUser?.notifications || [];
 
   return (
     <nav className="bg-fairway-700 text-white shadow-md">
@@ -136,53 +131,12 @@ const NavBar = () => {
               </Link>
 
               {/* Notifications */}
-              <div className="relative" ref={notificationRef}>
-                <button 
-                  onClick={toggleNotifications}
-                  className="relative p-2 rounded-full hover:bg-fairway-600 mx-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-flag-600 rounded-full">
-                      {unreadNotificationsCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Notifications Dropdown */}
-                {notificationsOpen && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-                    <div className="py-1">
-                      <div className="px-4 py-2 border-b border-gray-200">
-                        <h3 className="text-fairway-800 font-medium">Notifications</h3>
-                      </div>
-                      {notifications.length > 0 ? (
-                        <div className="max-h-96 overflow-y-auto">
-                          {notifications.map(notification => (
-                            <div 
-                              key={notification.id} 
-                              className={`px-4 py-3 hover:bg-gray-100 border-b border-gray-100 ${notification.isRead ? 'bg-white' : 'bg-fairway-50'}`}
-                            >
-                              <p className="text-sm text-gray-700">{notification.text}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="px-4 py-3 text-center text-gray-500">
-                          No notifications
-                        </div>
-                      )}
-                      <div className="border-t border-gray-100 px-4 py-2">
-                        <button className="text-sm text-fairway-600 hover:text-fairway-800 font-medium">
-                          View all notifications
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <NotificationBell
+                currentUser={currentUser}
+                isOpen={notificationsOpen}
+                toggleOpen={toggleNotifications}
+                notificationRef={notificationRef}
+              />
               
               {/* Profile Dropdown */}
               <div className="relative ml-3" ref={dropdownRef}>

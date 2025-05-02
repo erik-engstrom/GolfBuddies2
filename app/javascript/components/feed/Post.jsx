@@ -1,4 +1,5 @@
-import React, { useState, useContext, useEffect, memo } from 'react';
+// filepath: /Users/erikengstrom/Desktop/GolfBuddies2/app/javascript/components/feed/Post.jsx
+import React, { useState, useContext, useEffect, memo, useRef } from 'react';
 import { useMutation } from '@apollo/client';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,7 +13,7 @@ import CommentsSection from './CommentsSection';
 import EditPostModal from './EditPostModal';
 import DeletePostConfirmation from './DeletePostConfirmation';
 
-const Post = ({ post, refetchPosts }) => {
+const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null }) => {
   const { currentUser } = useContext(CurrentUserContext);
   const [showComments, setShowComments] = useState(false);
   const [error, setError] = useState('');
@@ -20,6 +21,9 @@ const Post = ({ post, refetchPosts }) => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [showPostOptions, setShowPostOptions] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // Create a reference for the post element for scrolling
+  const postRef = useRef(null);
   
   // Check if the current user is the author of this post
   const isPostAuthor = currentUser && post.user.id === currentUser.id;
@@ -88,6 +92,33 @@ const Post = ({ post, refetchPosts }) => {
     };
   }, [post.imageUrl, post.id]);
 
+  // Effect for handling target posts and comments
+  useEffect(() => {
+    if (isTargetPost) {
+      // Auto-scroll to this post with a smooth animation
+      if (postRef.current) {
+        setTimeout(() => {
+          postRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'center'
+          });
+          
+          // Highlight effect
+          postRef.current.classList.add('bg-fairway-50');
+          setTimeout(() => {
+            postRef.current.classList.remove('bg-fairway-50');
+            postRef.current.classList.add('bg-white');
+          }, 2000);
+        }, 300);
+      }
+
+      // If we have a target comment, show the comments section
+      if (targetCommentId) {
+        setShowComments(true);
+      }
+    }
+  }, [isTargetPost, targetCommentId]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -110,7 +141,11 @@ const Post = ({ post, refetchPosts }) => {
   }, [showPostOptions, post.id]);
   
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div 
+      id={`post-${post.id}`}
+      ref={postRef} 
+      className={`bg-white rounded-lg shadow-md p-6 mb-6 transition-colors duration-500 ${isTargetPost ? 'ring-2 ring-fairway-500' : ''}`}
+    >
       {error && (
         <div className="bg-flag-100 border border-flag-400 text-flag-700 px-4 py-3 rounded mb-4">
           {error}
@@ -249,7 +284,11 @@ const Post = ({ post, refetchPosts }) => {
       
       {/* Comments section */}
       {showComments && (
-        <CommentsSection post={post} refetchPosts={refetchPosts} />
+        <CommentsSection 
+          post={post} 
+          refetchPosts={refetchPosts}
+          targetCommentId={targetCommentId}
+        />
       )}
       
       {/* Edit Post Modal */}
@@ -277,7 +316,13 @@ const Post = ({ post, refetchPosts }) => {
 
 // Use React.memo to prevent unnecessary re-renders
 export default memo(Post, (prevProps, nextProps) => {
-  // Only re-render when the post data has actually changed
+  // Re-render when post data changes, or when target state changes
+  if (prevProps.isTargetPost !== nextProps.isTargetPost || 
+      prevProps.targetCommentId !== nextProps.targetCommentId) {
+    return false;
+  }
+  
+  // For other cases, only re-render when post data changes
   // This prevents re-renders when typing in the comment field
   return JSON.stringify(prevProps.post) === JSON.stringify(nextProps.post);
 });

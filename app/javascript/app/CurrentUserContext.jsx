@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
-import { CURRENT_USER_QUERY } from '../graphql/queries';
+import { CURRENT_USER_WITH_NOTIFICATIONS } from '../graphql/notifications';
 
 // Create the context
 export const CurrentUserContext = createContext({
@@ -14,7 +14,7 @@ export const CurrentUserContext = createContext({
 export const CurrentUserProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   
-  const { loading, error, data, refetch } = useQuery(CURRENT_USER_QUERY, {
+  const { loading, error, data, refetch } = useQuery(CURRENT_USER_WITH_NOTIFICATIONS, {
     fetchPolicy: 'network-only',
   });
 
