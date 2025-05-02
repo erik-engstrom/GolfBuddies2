@@ -65,8 +65,8 @@ export const CREATE_POST_MUTATION = gql`
 `;
 
 export const UPDATE_POST_MUTATION = gql`
-  mutation UpdatePost($postId: ID!, $content: String!) {
-    updatePost(input: {postId: $postId, content: $content}) {
+  mutation UpdatePost($id: ID!, $content: String!) {
+    updatePost(input: {id: $id, content: $content}) {
       post {
         id
         content
@@ -83,8 +83,8 @@ export const UPDATE_POST_MUTATION = gql`
 `;
 
 export const DELETE_POST_MUTATION = gql`
-  mutation DeletePost($postId: ID!) {
-    deletePost(input: {postId: $postId}) {
+  mutation DeletePost($id: ID!) {
+    deletePost(input: {id: $id}) {
       success
       errors
     }
@@ -137,7 +137,16 @@ export const ADD_POST_IMAGE_MUTATION = gql`
     addPostImage(input: {postId: $post_id, image: $image}) {
       post {
         id
+        content
+        createdAt
         imageUrl
+        likesCount
+        commentsCount
+        user {
+          id
+          fullName
+          profilePictureUrl
+        }
       }
       errors
     }

@@ -28,10 +28,18 @@ module Types
       if object.image.attached?
         # Add host configuration for URL generation
         begin
+          # Get image key to generate unique URLs and prevent caching
+          image_key = object.image.key
+          timestamp = Time.now.to_i
+
+          # Force Image URL to be fresh every time
           Rails.application.routes.url_helpers.rails_blob_url(
-            object.image, 
+            object.image,
             host: Rails.application.config.active_storage.default_url_options[:host] || "localhost",
-            port: Rails.application.config.active_storage.default_url_options[:port] || 3000
+            port: Rails.application.config.active_storage.default_url_options[:port] || 3000,
+            # Add cache-busting query parameters
+            v: timestamp,
+            key: image_key
           )
         rescue => e
           Rails.logger.error("Error generating image URL: #{e.message}")

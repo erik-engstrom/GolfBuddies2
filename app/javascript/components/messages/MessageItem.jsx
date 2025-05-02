@@ -4,6 +4,11 @@ const MessageItem = ({ message, currentUser, formatTime }) => {
   // Add null check to avoid the error when currentUser or message.sender is undefined
   const isFromCurrentUser = currentUser && message && message.sender && message.sender.id === currentUser.id;
   
+  // If message or sender is undefined, don't render anything
+  if (!message || !message.sender) {
+    return null;
+  }
+
   return (
     <div 
       className={`mb-4 flex ${
@@ -15,12 +20,12 @@ const MessageItem = ({ message, currentUser, formatTime }) => {
           {message.sender.profilePictureUrl ? (
             <img 
               src={message.sender.profilePictureUrl} 
-              alt={message.sender.fullName}
+              alt={message.sender.fullName || 'User'}
               className="h-8 w-8 rounded-full"
             />
           ) : (
             <div className="h-8 w-8 rounded-full bg-fairway-400 text-white flex items-center justify-center">
-              {message.sender.fullName.charAt(0)}
+              {message.sender.fullName ? message.sender.fullName.charAt(0) : 'U'}
             </div>
           )}
         </div>
@@ -46,17 +51,17 @@ const MessageItem = ({ message, currentUser, formatTime }) => {
         </p>
       </div>
       
-      {isFromCurrentUser && (
+      {isFromCurrentUser && currentUser && (
         <div className="flex-shrink-0 ml-2">
           {currentUser.profilePictureUrl ? (
             <img 
               src={currentUser.profilePictureUrl} 
-              alt={currentUser.fullName}
+              alt={currentUser.fullName || 'Me'}
               className="h-8 w-8 rounded-full"
             />
           ) : (
             <div className="h-8 w-8 rounded-full bg-fairway-600 text-white flex items-center justify-center">
-              {currentUser.fullName.charAt(0)}
+              {currentUser.fullName ? currentUser.fullName.charAt(0) : 'M'}
             </div>
           )}
         </div>

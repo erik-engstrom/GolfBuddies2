@@ -1,7 +1,6 @@
 import React, { useContext } from 'react';
 import { CurrentUserContext } from '../../app/CurrentUserContext';
-import PostForm from './PostForm';
-import PostList from './PostList';
+import PostListContainer from './PostListContainer';
 
 const Feed = () => {
   const { currentUser, loading, error } = useContext(CurrentUserContext);
@@ -117,8 +116,7 @@ const Feed = () => {
       
       {currentUser && (
         <>
-          <PostForm />
-          <PostList />
+          <PostListContainer />
         </>
       )}
     </div>

@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@apollo/client';
 import { GET_FEED_POSTS } from '../../graphql/queries';
 import Post from './Post';
 
 const PostList = () => {
-  const { loading, error, data, refetch } = useQuery(GET_FEED_POSTS);
+  const { loading, error, data, refetch } = useQuery(GET_FEED_POSTS, {
+    fetchPolicy: 'cache-and-network', // Use cache but also fetch from network
+    nextFetchPolicy: 'cache-first', // Use cache for subsequent fetches
+  });
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">

@@ -1,44 +1,34 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, memo } from 'react';
 import { useMutation } from '@apollo/client';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { 
-  TOGGLE_LIKE_MUTATION, 
-  CREATE_COMMENT_MUTATION, 
-  UPDATE_POST_MUTATION, 
-  DELETE_POST_MUTATION 
+import {
+  TOGGLE_LIKE_MUTATION,
+  UPDATE_POST_MUTATION,
+  DELETE_POST_MUTATION
 } from '../../graphql/mutations';
 import { CurrentUserContext } from '../../app/CurrentUserContext';
-import CommentItem from './CommentItem';
+import CommentsSection from './CommentsSection';
 import EditPostModal from './EditPostModal';
 import DeletePostConfirmation from './DeletePostConfirmation';
 
 const Post = ({ post, refetchPosts }) => {
   const { currentUser } = useContext(CurrentUserContext);
   const [showComments, setShowComments] = useState(false);
-  const [commentContent, setCommentContent] = useState('');
   const [error, setError] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [showPostOptions, setShowPostOptions] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   // Check if the current user is the author of this post
   const isPostAuthor = currentUser && post.user.id === currentUser.id;
 
-  // Toggle like mutation
+  // Track the previous image URL to detect changes
+  const [prevImageUrl, setPrevImageUrl] = useState(post.imageUrl || '');
+  
   const [toggleLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE_MUTATION, {
     onCompleted: () => {
-      refetchPosts();
-    },
-    onError: (error) => {
-      setError(error.message);
-    }
-  });
-
-  // Create comment mutation
-  const [createComment, { loading: commentLoading }] = useMutation(CREATE_COMMENT_MUTATION, {
-    onCompleted: () => {
-      setCommentContent('');
       refetchPosts();
     },
     onError: (error) => {
@@ -56,21 +46,47 @@ const Post = ({ post, refetchPosts }) => {
     });
   };
 
-  // Handle comment submission
-  const handleCommentSubmit = (e) => {
-    e.preventDefault();
-    if (!commentContent.trim()) {
-      setError('Comment cannot be empty');
-      return;
+  // Effect to detect image URL changes
+  useEffect(() => {
+    // Check if the image URL has changed
+    if (post.imageUrl !== prevImageUrl) {
+      console.log(`Image URL changed for post ${post.id}:`, { 
+        previous: prevImageUrl, 
+        current: post.imageUrl 
+      });
+      setPrevImageUrl(post.imageUrl || '');
+      setImageLoaded(false); // Reset loading state on URL change
     }
+  }, [post.imageUrl, prevImageUrl, post.id]);
 
-    createComment({
-      variables: {
-        postId: post.id,
-        content: commentContent
-      }
-    });
-  };
+  // Effect to handle image loading
+  useEffect(() => {
+    if (!post.imageUrl) return;
+      
+    // Add a cache-busting parameter to force a fresh fetch
+    const cacheBuster = Date.now();
+    const imgSrc = post.imageUrl.includes('?') 
+      ? `${post.imageUrl}&t=${cacheBuster}` 
+      : `${post.imageUrl}?t=${cacheBuster}`;
+    
+    console.log(`Loading image for post ${post.id}: ${imgSrc}`);
+    
+    // Preload the image
+    const img = new Image();
+    img.onload = () => {
+      console.log(`Image loaded for post ${post.id}`);
+      setImageLoaded(true);
+    };
+    img.onerror = (e) => {
+      console.error(`Error loading image for post ${post.id}:`, e);
+    };
+    img.src = imgSrc;
+    
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [post.imageUrl, post.id]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -183,12 +199,26 @@ const Post = ({ post, refetchPosts }) => {
       <div className="mb-4">
         <p className="text-gray-800">{post.content}</p>
         {post.imageUrl && (
-          <div className="mt-3 overflow-hidden rounded-lg bg-gray-100">
+          <div className="mt-3 overflow-hidden rounded-lg bg-gray-100 relative">
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-fairway-600"></div>
+              </div>
+            )}
             <img 
-              src={post.imageUrl} 
+              key={`${post.id}-image-${Date.now()}`} // Dynamic key to force re-render
+              src={`${post.imageUrl}${post.imageUrl.includes('?') ? '&' : '?'}nocache=${Date.now()}`} // Strong cache buster
               alt="Post attachment" 
-              className="w-full max-h-96 object-contain"
-              loading="lazy" 
+              className={`w-full max-h-96 object-contain transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              loading="eager"
+              onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                console.error(`Image failed to load for post ${post.id}:`, e);
+                // Attempt to reload after a short delay
+                setTimeout(() => {
+                  e.target.src = `${post.imageUrl}${post.imageUrl.includes('?') ? '&' : '?'}retry=${Date.now()}`;
+                }, 500);
+              }}
             />
           </div>
         )}
@@ -219,42 +249,7 @@ const Post = ({ post, refetchPosts }) => {
       
       {/* Comments section */}
       {showComments && (
-        <div className="mt-4">
-          <form onSubmit={handleCommentSubmit} className="mb-4">
-            <div className="flex">
-              <input
-                type="text"
-                value={commentContent}
-                onChange={(e) => setCommentContent(e.target.value)}
-                placeholder="Write a comment..."
-                className="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-fairway-500"
-              />
-              <button
-                type="submit"
-                disabled={commentLoading}
-                className={`px-4 py-2 rounded-r-md ${
-                  commentLoading ? 'bg-gray-400' : 'bg-fairway-600 hover:bg-fairway-700'
-                } text-white`}
-              >
-                {commentLoading ? 'Posting...' : 'Post'}
-              </button>
-            </div>
-          </form>
-          
-          {post.comments && post.comments.length > 0 ? (
-            <div className="space-y-3">
-              {post.comments.map(comment => (
-                <CommentItem 
-                  key={comment.id} 
-                  comment={comment} 
-                  refetchPosts={refetchPosts} 
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center">No comments yet. Be the first to comment!</p>
-          )}
-        </div>
+        <CommentsSection post={post} refetchPosts={refetchPosts} />
       )}
       
       {/* Edit Post Modal */}
@@ -280,4 +275,9 @@ const Post = ({ post, refetchPosts }) => {
   );
 };
 
-export default Post;
+// Use React.memo to prevent unnecessary re-renders
+export default memo(Post, (prevProps, nextProps) => {
+  // Only re-render when the post data has actually changed
+  // This prevents re-renders when typing in the comment field
+  return JSON.stringify(prevProps.post) === JSON.stringify(nextProps.post);
+});

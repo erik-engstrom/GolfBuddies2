@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { GET_BUDDIES, GET_MESSAGES_WITH_USER, CURRENT_USER_QUERY } from '../../graphql/queries';
 import { SEND_MESSAGE_MUTATION } from '../../graphql/mutations';
 import { MARK_ALL_MESSAGES_AS_READ_MUTATION } from '../../graphql/mutations/markAllMessagesAsRead';
+import { CurrentUserContext } from '../../app/CurrentUserContext';
 import MessageSubscription from '../MessageSubscription';
 import MessageItem from './MessageItem';
 
-const Messages = ({ currentUser }) => {
+const Messages = ({ currentUser: propCurrentUser }) => {
+  // Use context if prop is not provided
+  const { currentUser: contextCurrentUser } = useContext(CurrentUserContext);
+  const currentUser = propCurrentUser || contextCurrentUser;
+  
   const [selectedBuddy, setSelectedBuddy] = useState(null);
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef(null);
@@ -281,13 +286,21 @@ const Messages = ({ currentUser }) => {
   
   const groupedMessages = groupMessagesByDate(messagesData?.messagesWithUser || []);
   
+  // If currentUser is not available yet, show a loading state
+  if (!currentUser) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fairway-600"></div>
+      </div>
+    );
+  }
+  
   return (
     <div className="max-w-6xl mx-auto">
       {/* Add subscription component for real-time updates with enhanced debounce */}
-      {currentUser && (
-        <MessageSubscription 
-          userId={currentUser.id} 
-          onNewMessage={(newMessage) => {
+      <MessageSubscription 
+        userId={currentUser.id} 
+        onNewMessage={(newMessage) => {
             // Only refetch if the message is from the currently selected buddy
             // or if it's a message sent to the current user from someone else
             if (selectedBuddy && (

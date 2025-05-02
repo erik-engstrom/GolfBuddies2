@@ -3,7 +3,7 @@ import { useMutation } from '@apollo/client';
 import { CREATE_POST_MUTATION, ADD_POST_IMAGE_MUTATION } from '../../graphql/mutations';
 import { GET_FEED_POSTS } from '../../graphql/queries';
 
-const PostForm = () => {
+const PostForm = ({ refetchPosts }) => {
   const [content, setContent] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -12,6 +12,7 @@ const PostForm = () => {
   const fileInputRef = useRef(null);
 
   const [createPost, { loading }] = useMutation(CREATE_POST_MUTATION, {
+    refetchQueries: [{ query: GET_FEED_POSTS, fetchPolicy: 'network-only' }], // Force refetch posts after creation
     onCompleted: (data) => {
       // If we have an image to upload and post creation was successful, attach the image
       if (image && data.createPost.post) {
@@ -26,6 +27,9 @@ const PostForm = () => {
               setIsUploading(false);
             } else {
               // Image uploaded successfully
+              console.log("Image uploaded successfully:", imageData.addPostImage.post.imageUrl);
+              // Force a refetch to ensure we get the updated data
+              refetchPosts && refetchPosts();
               setIsUploading(false);
               resetForm(); // Reset the form only once here
             }
@@ -56,7 +60,9 @@ const PostForm = () => {
   });
 
   const [addPostImage] = useMutation(ADD_POST_IMAGE_MUTATION, {
-    refetchQueries: [{ query: GET_FEED_POSTS }], // This already refetches the posts after upload
+    refetchQueries: [{ query: GET_FEED_POSTS, fetchPolicy: 'network-only' }],
+    // Force a refetch from network to ensure fresh data
+    awaitRefetchQueries: true, // This ensures we wait for the refetch to complete
     onError: (error) => {
       setError(`Failed to upload image: ${error.message}`);
       setIsUploading(false);
@@ -107,8 +113,8 @@ const PostForm = () => {
     
     // Submit the post
     createPost({ 
-      variables: { content },
-      refetchQueries: [{ query: GET_FEED_POSTS }] // Ensure feed is refreshed even if no image
+      variables: { content }
+      // We're now handling the cache updates directly in the mutation's update function
     });
   };
 
