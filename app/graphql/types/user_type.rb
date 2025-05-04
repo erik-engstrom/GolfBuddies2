@@ -45,7 +45,17 @@ module Types
     end
     
     def unread_messages_count
-      object.unread_messages_count
+      # Ensure the count is consistent with the per-buddy counts
+      count_by_buddy = object.unread_messages_count_by_buddy
+      total = count_by_buddy.values.sum
+      
+      # Log warning if there's a mismatch with the direct count
+      direct_count = object.received_messages.where(read: false).count
+      if direct_count != total
+        Rails.logger.warn "Unread message count mismatch: direct=#{direct_count}, summed=#{total}"
+      end
+      
+      total
     end
     
     def unread_messages_count_by_buddy

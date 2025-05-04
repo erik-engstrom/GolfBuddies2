@@ -5,6 +5,7 @@
     "@apollo/client": "^3.8.9",
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo-rails": "^8.0.2",
+    "@rails/actioncable": "^8.0.200",
     "apollo-upload-client": "^17.0.0",
     "date-fns": "^4.1.0",
     "esbuild": "^0.19.11",

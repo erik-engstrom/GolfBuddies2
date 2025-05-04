@@ -8,6 +8,7 @@ import { CurrentUserContext } from '../../app/CurrentUserContext';
 import MessageSubscription from '../MessageSubscription';
 import MessageItem from './MessageItem';
 import UserAvatar from './UserAvatar';
+import { gql } from '@apollo/client';
 
 const Messages = ({ currentUser: propCurrentUser }) => {
 
@@ -54,45 +55,346 @@ const Messages = ({ currentUser: propCurrentUser }) => {
     }
   });
 
-  const [markAllMessagesAsRead] = useMutation(MARK_ALL_MESSAGES_AS_READ_MUTATION);
+  const [markAllMessagesAsRead] = useMutation(MARK_ALL_MESSAGES_AS_READ_MUTATION, {
+    optimisticResponse: {
+      markAllMessagesAsRead: {
+        success: true,
+        errors: [],
+        __typename: 'MarkAllMessagesAsReadPayload'
+      }
+    },
+    update: (cache, { variables }) => {
+      if (!variables?.buddyId) return;
+      
+      try {
+        // Update CURRENT_USER_WITH_NOTIFICATIONS cache
+        const userData = cache.readQuery({ query: CURRENT_USER_WITH_NOTIFICATIONS });
+        if (userData?.me) {
+          const buddyId = variables.buddyId;
+          const unreadCount = userData.me.unreadMessagesCountByBuddy?.[buddyId] || 0;
+          
+          if (unreadCount > 0) {
+            const updatedCountByBuddy = {
+              ...(userData.me.unreadMessagesCountByBuddy || {})
+            };
+            updatedCountByBuddy[buddyId] = 0;
+            
+            const newTotalCount = Math.max(0, userData.me.unreadMessagesCount - unreadCount);
+            
+            // Use both the regular cache.writeQuery and client.cache.writeQuery to ensure
+            // updates are applied to all components using this data
+            const updatedData = {
+              me: {
+                ...userData.me,
+                unreadMessagesCount: newTotalCount,
+                unreadMessagesCountByBuddy: updatedCountByBuddy
+              }
+            };
+            
+            // Update using both methods to ensure all components are refreshed
+            cache.writeQuery({
+              query: CURRENT_USER_WITH_NOTIFICATIONS,
+              data: updatedData
+            });
+            
+            // Force cache to broadcast changes to all observers
+            cache.evict({ 
+              id: 'ROOT_QUERY',
+              fieldName: 'me'
+            });
+            cache.gc();
+            
+            // Also directly modify the normalized cache to ensure all components see the update
+            try {
+              // Find the cache ID for the current user
+              const currentUserCacheId = cache.identify({ 
+                __typename: 'User', 
+                id: userData.me.id 
+              });
+              
+              if (currentUserCacheId) {
+                // This uses a direct internal cache modification that forces updates to all components
+                cache.modify({
+                  id: currentUserCacheId,
+                  fields: {
+                    unreadMessagesCount(_, { DELETE }) {
+                      if (newTotalCount === 0) return DELETE;
+                      return newTotalCount;
+                    },
+                    unreadMessagesCountByBuddy(existing) {
+                      // Create a completely new object to ensure cache updates are detected
+                      const updated = { ...existing };
+                      updated[buddyId] = 0;
+                      return updated;
+                    }
+                  },
+                  broadcast: true // Ensure all components see this update
+                });
+                
+                // Also try a more direct DOM update for the notification badge
+                setTimeout(() => {
+                  // Force a UI update by dispatching a custom event
+                  window.dispatchEvent(new CustomEvent('message-read', { 
+                    detail: { userId: buddyId, totalCount: newTotalCount } 
+                  }));
+                  
+                  // Store in localStorage as a backup way to communicate with navbar
+                  try {
+                    localStorage.setItem('unreadMessagesCount', newTotalCount.toString());
+                    localStorage.setItem('unreadMessagesCountUpdated', Date.now().toString());
+                  } catch (e) {
+                    console.log('Could not store in localStorage', e);
+                  }
+                }, 0);
+              }
+            } catch (e) {
+              console.error('Error directly modifying cache:', e);
+            }
+            
+            // Also update the read status of messages in the conversation
+            try {
+              const messagesData = cache.readQuery({
+                query: GET_MESSAGES_WITH_USER,
+                variables: { userId: buddyId }
+              });
+              
+              if (messagesData?.messagesWithUser) {
+                // Update all unread messages from this buddy to be marked as read
+                const updatedMessages = messagesData.messagesWithUser.map(message => {
+                  // Only update messages from this buddy to the current user that are not read
+                  if (message.sender.id === buddyId && !message.read) {
+                    return { ...message, read: true };
+                  }
+                  return message;
+                });
+                
+                // Write the updated messages back to the cache
+                cache.writeQuery({
+                  query: GET_MESSAGES_WITH_USER,
+                  variables: { userId: buddyId },
+                  data: {
+                    messagesWithUser: updatedMessages
+                  }
+                });
+                
+                console.log(`Updated read status for ${updatedMessages.length} messages in cache`);
+              }
+            } catch (err) {
+              // It's okay if this fails - the messages query might not be in the cache yet
+              console.log('Messages cache not available for read status update, will be updated on next query');
+            }
+          }
+        }
+        
+        // Update GET_BUDDIES cache
+        try {
+          const buddiesData = cache.readQuery({ query: GET_BUDDIES });
+          if (buddiesData?.me) {
+            const buddyId = variables.buddyId;
+            
+            // Also update individual buddies if they exist in the cache
+            if (buddiesData.buddies) {
+              const updatedBuddies = buddiesData.buddies.map(b => {
+                if (b.id === buddyId) {
+                  return { 
+                    ...b,
+                    unreadMessagesCount: 0 // Set unread count to zero directly on buddy object
+                  };
+                }
+                return b;
+              });
+              
+              const updatedBuddiesCountByBuddy = {
+                ...(buddiesData.me.unreadMessagesCountByBuddy || {})
+              };
+              updatedBuddiesCountByBuddy[buddyId] = 0;
+              
+              cache.writeQuery({
+                query: GET_BUDDIES,
+                data: {
+                  ...buddiesData,
+                  buddies: updatedBuddies,
+                  me: {
+                    ...buddiesData.me,
+                    unreadMessagesCountByBuddy: updatedBuddiesCountByBuddy
+                  }
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.log('GET_BUDDIES not in cache yet, will update on next query');
+        }
+      } catch (e) {
+        console.error('Error optimistically updating message read status:', e);
+      }
+    }
+  });
 
   const lastMarkAllRequest = useRef({});
 
   const handleSelectBuddy = async (buddy) => {
-
+    // If clicking on the already selected buddy, don't do anything
     if (selectedBuddy?.id === buddy.id) {
       return;
     }
 
+    // Set the selected buddy immediately for a responsive UI
     setSelectedBuddy(buddy);
-
 
     if (buddy) {
       try {
-
+        // Get the number of unread messages from this buddy
         const unreadCount = getUnreadCountForBuddy(buddy.id);
+        console.log(`Selected buddy ${buddy.id} with ${unreadCount} unread messages`);
 
-        updateUnreadCountsInCache(buddy.id, unreadCount);
-
+        // Only proceed if there are unread messages to mark as read
         if (unreadCount > 0) {
+          // Check if we've recently made a request to mark messages as read
           const now = Date.now();
           const lastRequest = lastMarkAllRequest.current[buddy.id] || 0;
 
+          // Throttle requests to avoid spamming the server
           if (now - lastRequest < 5000) {
             console.log(`Skipping markAllMessagesAsRead - throttled (last request: ${new Date(lastRequest).toLocaleTimeString()})`);
-            return;
+          } else {
+            // Remember that we've made a request
+            lastMarkAllRequest.current[buddy.id] = now;
+
+            console.log(`Marking all messages as read for buddy ${buddy.id} (${unreadCount} unread messages)`);
+
+            // Call the mutation to mark all messages as read
+            // The optimistic response will immediately update the UI
+            markAllMessagesAsRead({ 
+              variables: { buddyId: buddy.id }
+            });                // Force immediate UI updates for the unread indicators
+                // 1. Update for the buddy list in this component
+                try {
+                  const buddyData = client.readQuery({ query: GET_BUDDIES });
+                  if (buddyData?.buddies) {
+                    // Update the local cache to reflect the unread count changes
+                    const updatedBuddies = buddyData.buddies.map(b => {
+                      if (b.id === buddy.id) {
+                        console.log(`Updating unread count for buddy ${buddy.id} to 0 in cache`);
+                        return { 
+                          ...b,
+                          unreadMessagesCount: 0 // Set unread count to zero directly on buddy object
+                        };
+                      }
+                      return b;
+                    });
+                
+                client.writeQuery({
+                  query: GET_BUDDIES,
+                  data: {
+                    ...buddyData,
+                    buddies: updatedBuddies,
+                    me: {
+                      ...buddyData.me,
+                      unreadMessagesCountByBuddy: {
+                        ...(buddyData.me.unreadMessagesCountByBuddy || {}),
+                        [buddy.id]: 0
+                      }
+                    }
+                  }
+                });
+              }
+            } catch (e) {
+              console.error('Error updating buddy list:', e);
+            }
+            
+            // 2. Update for the navbar indicator
+            try {
+              const userData = client.readQuery({ query: CURRENT_USER_WITH_NOTIFICATIONS });
+              if (userData?.me) {
+                const oldCount = userData.me.unreadMessagesCountByBuddy?.[buddy.id] || 0;
+                const newTotalCount = Math.max(0, userData.me.unreadMessagesCount - oldCount);
+                
+                const updatedCountByBuddy = {
+                  ...(userData.me.unreadMessagesCountByBuddy || {})
+                };
+                updatedCountByBuddy[buddy.id] = 0;
+                
+                // Write directly to CURRENT_USER_WITH_NOTIFICATIONS cache
+                client.writeQuery({
+                  query: CURRENT_USER_WITH_NOTIFICATIONS,
+                  data: {
+                    me: {
+                      ...userData.me,
+                      unreadMessagesCount: newTotalCount,
+                      unreadMessagesCountByBuddy: updatedCountByBuddy
+                    }
+                  }
+                });
+                
+                // Also use a stronger approach to update the cache for all components
+                // First directly broadcast to all components using this field
+                client.cache.evict({ 
+                  id: 'ROOT_QUERY',
+                  fieldName: 'me'
+                });
+                
+                // Force refresh the cache for all queries that include unreadMessagesCount
+                client.cache.gc();
+                
+                // Now write the updated data back to the cache
+                client.cache.writeQuery({
+                  query: CURRENT_USER_WITH_NOTIFICATIONS,
+                  data: {
+                    me: {
+                      ...userData.me,
+                      unreadMessagesCount: newTotalCount,
+                      unreadMessagesCountByBuddy: updatedCountByBuddy
+                    }
+                  }
+                });
+                
+                // Find the cache ID for the current user and directly update fields
+                const currentUserCacheId = client.cache.identify({ 
+                  __typename: 'User', 
+                  id: userData.me.id 
+                });
+                
+                if (currentUserCacheId) {
+                  client.cache.modify({
+                    id: currentUserCacheId,
+                    fields: {
+                      unreadMessagesCount() {
+                        return newTotalCount;
+                      },
+                      unreadMessagesCountByBuddy() {
+                        return updatedCountByBuddy;
+                      }
+                    }
+                  });
+                }
+                
+                console.log('Updated navbar notification count:', {
+                  oldTotal: userData.me.unreadMessagesCount,
+                  newTotal: newTotalCount,
+                  buddyId: buddy.id,
+                  buddyOldCount: oldCount
+                });
+                
+                // Directly dispatch an event to force UI components to update
+                console.log('Dispatching message-read event with total count:', newTotalCount);
+                window.dispatchEvent(new CustomEvent('message-read', { 
+                  detail: { userId: buddy.id, totalCount: newTotalCount } 
+                }));
+                
+                // Also use localStorage as a backup communication channel
+                try {
+                  console.log('Updating localStorage unreadMessagesCount to:', newTotalCount);
+                  localStorage.setItem('unreadMessagesCount', newTotalCount.toString());
+                  localStorage.setItem('unreadMessagesCountUpdated', Date.now().toString());
+                } catch (e) {
+                  console.log('Could not store in localStorage', e);
+                }
+              }
+            } catch (e) {
+              console.error('Error updating notification badge:', e);
+            }
           }
-
-          lastMarkAllRequest.current[buddy.id] = now;
-
-          console.log(`Marking all messages as read for buddy ${buddy.id} (${unreadCount} unread messages)`);
-
-          await markAllMessagesAsRead({ variables: { buddyId: buddy.id } });
-
-          await client.refetchQueries({
-            include: [GET_MESSAGES_WITH_USER, GET_BUDDIES, CURRENT_USER_WITH_NOTIFICATIONS],
-            variables: { userId: buddy.id }
-          });
         }
       } catch (e) {
         console.error('Failed to mark all messages as read:', e);
@@ -100,54 +402,7 @@ const Messages = ({ currentUser: propCurrentUser }) => {
     }
   };
 
-  const updateUnreadCountsInCache = (buddyId, unreadCount) => {
-    const userData = client.readQuery({ query: CURRENT_USER_QUERY });
-
-    if (userData?.me) {
-      const updatedCountByBuddy = {
-        ...userData.me.unreadMessagesCountByBuddy
-      };
-      updatedCountByBuddy[buddyId] = 0;
-
-      const newTotalCount = Math.max(0, userData.me.unreadMessagesCount - unreadCount);
-
-      client.writeQuery({
-        query: CURRENT_USER_WITH_NOTIFICATIONS,
-        data: {
-          me: {
-            ...userData.me,
-            unreadMessagesCount: newTotalCount,
-            unreadMessagesCountByBuddy: updatedCountByBuddy
-          }
-        }
-      });
-    }
-
-    try {
-      const buddiesData = client.readQuery({ query: GET_BUDDIES });
-
-      if (buddiesData?.me) {
-        const updatedBuddiesCountByBuddy = {
-          ...buddiesData.me.unreadMessagesCountByBuddy
-        };
-        updatedBuddiesCountByBuddy[buddyId] = 0;
-
-        client.writeQuery({
-          query: GET_BUDDIES,
-          data: {
-            ...buddiesData,
-            me: {
-              ...buddiesData.me,
-              unreadMessagesCountByBuddy: updatedBuddiesCountByBuddy
-            }
-          }
-        });
-      }
-    } catch (e) {
-      console.error('Error updating buddies cache:', e);
-    }
-  };
-
+  // Function to get all buddies
   const {
     loading: loadingBuddies,
     error: buddiesError,
@@ -266,7 +521,15 @@ const Messages = ({ currentUser: propCurrentUser }) => {
       <MessageSubscription
         userId={currentUser.id}
         onNewMessage={(newMessage) => {
-
+            // Handle reconnection events
+            if (newMessage.type === 'reconnect') {
+              console.log('Reconnection event received, refetching data...');
+              // Force refetch messages and buddies to reset the subscription
+              refetchMessages();
+              return;
+            }
+            
+            // Normal message handling
             if (selectedBuddy && (
               (newMessage.sender.id === selectedBuddy.id && newMessage.receiver.id === currentUser.id) || 
               (newMessage.sender.id === currentUser.id && newMessage.receiver.id === selectedBuddy.id)

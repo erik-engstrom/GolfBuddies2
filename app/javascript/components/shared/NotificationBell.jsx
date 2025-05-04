@@ -212,6 +212,9 @@ const NotificationBell = ({ currentUser, isOpen, toggleOpen, notificationRef }) 
     }
   };
 
+  // Add debug logging
+  console.log('NotificationBell rendering with count:', unreadNotificationsCount);
+  
   return (
     <div className="relative" ref={notificationRef}>
       <button 

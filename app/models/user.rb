@@ -38,7 +38,9 @@ class User < ApplicationRecord
   end
   
   def unread_messages_count
-    received_messages.where(read: false).count
+    # Calculate the total count directly from unread_messages_count_by_buddy
+    # to ensure consistency between the total and per-buddy counts
+    unread_messages_count_by_buddy.values.sum
   end
 
   # Returns a hash: { buddy_id => count }
