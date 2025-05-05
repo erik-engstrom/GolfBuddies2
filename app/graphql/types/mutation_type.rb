@@ -10,6 +10,7 @@ module Types
     field :sign_up, mutation: Mutations::SignUp
     field :sign_in, mutation: Mutations::SignIn
     field :logout, mutation: Mutations::Logout
+    field :refresh_token, mutation: Mutations::RefreshToken
     
     # Post mutations
     field :create_post, mutation: Mutations::CreatePost

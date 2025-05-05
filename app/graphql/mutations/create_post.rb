@@ -6,9 +6,10 @@ module Mutations
 
     # Define the arguments this mutation accepts
     argument :content, String, required: true
+    argument :buddy_only, Boolean, required: false, default_value: false
     # We'll handle image upload with a separate mutation for simplicity
 
-    def resolve(content:)
+    def resolve(content:, buddy_only: false)
       # Check if user is authenticated
       unless context[:current_user]
         return {
@@ -17,7 +18,7 @@ module Mutations
         }
       end
 
-      post = context[:current_user].posts.build(content: content)
+      post = context[:current_user].posts.build(content: content, buddy_only: buddy_only)
 
       if post.save
         {

@@ -49,6 +49,7 @@ window.addEventListener('ws-status-change', (event) => {
 // React and Apollo Client setup - importing the factory function instead of the client directly
 // This ensures ActionCable is available before GraphQL client initialization
 import React from 'react';
+import { initTokenRefresh } from './graphql/refreshToken';
 import { createRoot } from 'react-dom/client';
 import { ApolloProvider } from '@apollo/client';
 import { BrowserRouter as Router } from 'react-router-dom';
@@ -87,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Initialize the Apollo client here to ensure ActionCable is available
       const client = createApolloClient();
       console.log("Apollo client initialized for React rendering");
+      
+      // Initialize token refresh mechanism
+      initTokenRefresh();
       
       // Render the App component with Apollo and Router providers
       root.render(

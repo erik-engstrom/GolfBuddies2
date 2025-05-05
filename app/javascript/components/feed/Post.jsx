@@ -19,6 +19,53 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
   const [error, setError] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  
+  // Cache post data in localStorage for restricted post messages
+  useEffect(() => {
+    if (post?.id) {
+      try {
+        // Get existing cached posts
+        const cachedPostsString = localStorage.getItem('cachedPosts');
+        let cachedPosts = cachedPostsString ? JSON.parse(cachedPostsString) : [];
+        
+        // Find if this post is already cached
+        const existingIndex = cachedPosts.findIndex(p => p.id === post.id);
+        
+        // Create a minimal version of the post to cache
+        const postToCache = {
+          id: post.id,
+          user: {
+            id: post.user.id,
+            fullName: post.user.fullName
+          },
+          buddyOnly: post.buddyOnly
+        };
+        
+        // Update or add the post
+        if (existingIndex >= 0) {
+          cachedPosts[existingIndex] = postToCache;
+        } else {
+          // Add to beginning, limit to 50 posts
+          cachedPosts.unshift(postToCache);
+          if (cachedPosts.length > 50) {
+            cachedPosts = cachedPosts.slice(0, 50);
+          }
+        }
+        
+        // Save back to localStorage
+        localStorage.setItem('cachedPosts', JSON.stringify(cachedPosts));
+      } catch (e) {
+        console.error('Error caching post data:', e);
+      }
+    }
+  }, [post]);
+  
+  // Auto-show comments when there's a target comment ID
+  useEffect(() => {
+    if (targetCommentId) {
+      setShowComments(true);
+    }
+  }, [targetCommentId]);
   const [showPostOptions, setShowPostOptions] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   
@@ -174,9 +221,16 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
         <div className="flex-1">
           <div className="flex justify-between items-start">
             <div>
-              <Link to={`/users/${post.user.id}`} className="hover:underline">
-                <h3 className="font-bold text-fairway-800">{post.user.fullName}</h3>
-              </Link>
+              <div className="flex items-center">
+                <Link to={`/users/${post.user.id}`} className="hover:underline">
+                  <h3 className="font-bold text-fairway-800">{post.user.fullName}</h3>
+                </Link>
+                {post.buddyOnly && (
+                  <span className="ml-2 px-2 py-0.5 bg-fairway-100 text-fairway-700 text-xs rounded-full border border-fairway-300">
+                    Buddy Only
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
                 {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
               </p>
@@ -273,13 +327,23 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
         
         <button 
           onClick={() => setShowComments(!showComments)}
-          className="flex items-center text-gray-500 hover:text-fairway-600"
+          className="flex items-center mr-4 text-gray-500 hover:text-fairway-600"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           <span>{post.commentsCount || 0} {post.commentsCount === 1 ? 'Comment' : 'Comments'}</span>
         </button>
+        
+        <Link
+          to={`/posts/${post.id}`}
+          className="flex items-center text-gray-500 hover:text-fairway-600"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          <span>Share</span>
+        </Link>
       </div>
       
       {/* Comments section */}

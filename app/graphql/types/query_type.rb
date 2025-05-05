@@ -30,7 +30,9 @@ module Types
     field :post, Types::PostType, null: true, description: "Returns a post by ID" do
       argument :id, ID, required: true
     end
-    field :posts, [Types::PostType], null: false, description: "Returns a list of posts"
+    field :posts, [Types::PostType], null: false, description: "Returns a list of posts" do
+      argument :buddy_only, Boolean, required: false, description: "If true, only returns posts from buddies"
+    end
     
     # Buddy system queries
     field :buddies, [Types::UserType], null: false, description: "Returns a list of the current user's buddies"
@@ -63,11 +65,59 @@ module Types
     end
 
     def post(id:)
-      Post.find_by(id: id)
+      post = Post.find_by(id: id)
+      
+      # Return nil if post doesn't exist
+      return nil unless post
+      
+      # If post is buddy-only, check that the current user has permission to view it
+      if post.buddy_only
+        # Allow the post owner to see their own buddy-only post
+        return post if context[:current_user] && context[:current_user].id == post.user_id
+        
+        # Allow buddies to see buddy-only posts
+        return post if context[:current_user] && context[:current_user].buddies.exists?(post.user_id)
+        
+        # Otherwise restrict access to buddy-only posts
+        return nil
+      end
+      
+      # Non-buddy-only posts are accessible to everyone
+      post
     end
 
-    def posts
-      Post.includes(:user, :comments, :likes).order(created_at: :desc)
+    def posts(buddy_only: false)
+      base_query = Post.includes(:user, :comments, :likes).order(created_at: :desc)
+      
+      # If we have a current user, filter buddy-only posts to ensure they're only visible to buddies
+      if context[:current_user]
+        # Get the IDs of the current user's buddies
+        buddy_ids = context[:current_user].buddies.pluck(:id)
+        # Include the current user's ID as well, as they should see their own buddy-only posts
+        buddy_ids << context[:current_user].id
+        
+        puts "Current user ID: #{context[:current_user].id}, Buddy IDs: #{buddy_ids.inspect}"
+        
+        # Apply filters based on the buddy_only parameter
+        if buddy_only
+          # When buddy_only is true, show only buddy-only posts from the user's buddies
+          # (as well as the user's own buddy-only posts)
+          base_query = base_query.where(user_id: buddy_ids).where(buddy_only: true)
+          puts "BUDDY ONLY FEED - SQL: #{base_query.to_sql}"
+        else
+          # When showing all posts, show only public posts (not buddy-only)
+          # regardless of who posted them
+          filtered_query = base_query.where(buddy_only: false)
+          puts "ALL POSTS FEED - SQL: #{filtered_query.to_sql}"
+          base_query = filtered_query
+        end
+      else
+        # If no user is logged in, only show public posts (not buddy-only)
+        base_query = base_query.where(buddy_only: false)
+        puts "NO USER - SQL: #{base_query.to_sql}"
+      end
+      
+      base_query
     end
 
     def buddies

@@ -262,6 +262,9 @@ const createActionCableLink = () => {
   };
 };
 
+// Import token refresh link
+import tokenRefreshLink from './link/tokenRefreshLink';
+
 // Export a factory function to create and configure the Apollo Client
 export function createApolloClient() {
   console.log("Creating Apollo Client...");
@@ -308,10 +311,12 @@ export function createApolloClient() {
     authLink.concat(httpLink)
   );
 
-  // Create the combined link chain with the blocking link first
+  // Create the combined link chain
   const combinedLink = from([
     // First check if we need to block the request
     blockRedundantRequestsLink,
+    // Handle token expiration and refresh
+    tokenRefreshLink,
     // Then go through the normal splitting logic
     splitLink
   ]);

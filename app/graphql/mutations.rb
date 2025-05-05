@@ -5,6 +5,7 @@
 require_relative "mutations/sign_up"
 require_relative "mutations/sign_in"
 require_relative "mutations/logout"
+require_relative "mutations/refresh_token"
 
 # Post mutations
 require_relative "mutations/create_post"

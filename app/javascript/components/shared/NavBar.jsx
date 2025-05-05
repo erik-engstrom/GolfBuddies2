@@ -163,6 +163,28 @@ const NavBar = () => {
     }
   }, [unreadMessagesCount, currentUser?.unreadMessagesCount]);
   
+  // Listen for token refresh events
+  useEffect(() => {
+    const handleTokenRefresh = (event) => {
+      console.log('Token refresh event detected in NavBar component');
+      if (event.detail?.success) {
+        // Force a refresh of notifications and user data
+        client.query({
+          query: CURRENT_USER_WITH_NOTIFICATIONS,
+          fetchPolicy: 'network-only'
+        });
+      }
+    };
+    
+    // Add event listener for token refresh events
+    window.addEventListener('token-refreshed', handleTokenRefresh);
+    
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('token-refreshed', handleTokenRefresh);
+    };
+  }, [client]);
+  
   useEffect(() => {
     console.log('NavBar WebSocket status updated:', wsStatus);
   }, [wsStatus]);

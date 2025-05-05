@@ -79,6 +79,25 @@ export const GET_USER_PROFILE = gql`
   }
 `;
 
+export const GET_USER_INFO = gql`
+  query GetUserInfo($id: ID!) {
+    user(id: $id) {
+      id
+      fullName
+      profilePictureUrl
+      isBuddy
+      outgoingBuddyRequest {
+        id
+        status
+      }
+      incomingBuddyRequest {
+        id
+        status
+      }
+    }
+  }
+`;
+
 // Post queries
 export const GET_POSTS = gql`
   query GetPosts {
@@ -99,14 +118,15 @@ export const GET_POSTS = gql`
 `;
 
 export const GET_FEED_POSTS = gql`
-  query GetFeedPosts {
-    posts {
+  query GetFeedPosts($buddyOnly: Boolean) {
+    posts(buddyOnly: $buddyOnly) {
       id
       content
       createdAt
       imageUrl
       likesCount
       commentsCount
+      buddyOnly
       user {
         id
         fullName
@@ -191,6 +211,37 @@ export const SEARCH_USERS = gql`
       lastName
       fullName
       profilePictureUrl
+    }
+  }
+`;
+
+// Get single post by ID
+export const GET_SINGLE_POST = gql`
+  query GetSinglePost($id: ID!) {
+    post(id: $id) {
+      id
+      content
+      createdAt
+      imageUrl
+      likesCount
+      commentsCount
+      buddyOnly
+      user {
+        id
+        fullName
+        profilePictureUrl
+      }
+      comments {
+        id
+        content
+        createdAt
+        likesCount
+        user {
+          id
+          fullName
+          profilePictureUrl
+        }
+      }
     }
   }
 `;

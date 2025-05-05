@@ -10,8 +10,37 @@ class GraphqlController < ApplicationController
     variables = prepare_variables(params[:variables])
     query = params[:query]
     operation_name = params[:operationName]
+    
+    # Get the current user
+    user = current_user
+    
+    # Check for authentication requirement and token status
+    token_expired = false
+    
+    # Check if this is a token refresh operation
+    is_refresh_token_operation = query&.include?('refreshToken') && operation_name == 'RefreshToken'
+    
+    # Check if token has expired (only for non-refresh operations)
+    unless is_refresh_token_operation
+      begin
+        token = request.headers['Authorization']&.split(' ')&.last || 
+                params[:token] || 
+                params[:graphql]&.dig(:token)
+        if token
+          JWT.decode(token, Rails.application.credentials.secret_key_base)
+        end
+      rescue JWT::ExpiredSignature
+        token_expired = true
+        Rails.logger.info "Token expired during GraphQL operation: #{operation_name}"
+      rescue => e
+        Rails.logger.error "Token error during operation: #{e.message}"
+      end
+    end
+    
     context = {
-      current_user: current_user,
+      current_user: user,
+      token_expired: token_expired,
+      request: request
     }
     
     # Add detailed debug information for file uploads
@@ -72,7 +101,14 @@ class GraphqlController < ApplicationController
     begin
       decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base).first
       User.find_by(id: decoded_token['user_id'])
-    rescue JWT::DecodeError
+    rescue JWT::ExpiredSignature
+      # Log token expiration
+      Rails.logger.info "JWT token expired"
+      # Return specific error for token expiration
+      nil
+    rescue JWT::DecodeError => e
+      # Log other JWT errors
+      Rails.logger.error "JWT decode error: #{e.message}"
       nil
     end
   end

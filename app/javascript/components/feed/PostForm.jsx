@@ -9,10 +9,15 @@ const PostForm = ({ refetchPosts }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [buddyOnly, setBuddyOnly] = useState(false);
   const fileInputRef = useRef(null);
 
   const [createPost, { loading }] = useMutation(CREATE_POST_MUTATION, {
-    refetchQueries: [{ query: GET_FEED_POSTS, fetchPolicy: 'network-only' }], // Force refetch posts after creation
+    refetchQueries: [{ 
+      query: GET_FEED_POSTS, 
+      fetchPolicy: 'network-only',
+      variables: { buddyOnly: false } // Always show all posts after creating a new one
+    }], // Force refetch posts after creation
     onCompleted: (data) => {
       // If we have an image to upload and post creation was successful, attach the image
       if (image && data.createPost.post) {
@@ -60,7 +65,11 @@ const PostForm = ({ refetchPosts }) => {
   });
 
   const [addPostImage] = useMutation(ADD_POST_IMAGE_MUTATION, {
-    refetchQueries: [{ query: GET_FEED_POSTS, fetchPolicy: 'network-only' }],
+    refetchQueries: [{ 
+      query: GET_FEED_POSTS, 
+      fetchPolicy: 'network-only',
+      variables: { buddyOnly: false } // Always show all posts after adding an image
+    }],
     // Force a refetch from network to ensure fresh data
     awaitRefetchQueries: true, // This ensures we wait for the refetch to complete
     onError: (error) => {
@@ -79,6 +88,9 @@ const PostForm = ({ refetchPosts }) => {
     
     // Reset upload state
     setIsUploading(false);
+    
+    // Reset buddy-only state
+    setBuddyOnly(false);
     
     // Clear error messages
     setError('');
@@ -111,9 +123,9 @@ const PostForm = ({ refetchPosts }) => {
     // Set uploading state to show feedback to user
     setIsUploading(true);
     
-    // Submit the post
+    // Submit the post with buddyOnly flag
     createPost({ 
-      variables: { content }
+      variables: { content, buddyOnly }
       // We're now handling the cache updates directly in the mutation's update function
     });
   };
@@ -176,6 +188,8 @@ const PostForm = ({ refetchPosts }) => {
           disabled={isUploading}
         />
         
+
+        
         {/* Image preview area */}
         {imagePreview && (
           <div className="mt-4 relative">
@@ -196,9 +210,30 @@ const PostForm = ({ refetchPosts }) => {
             </button>
           </div>
         )}
-        
-        <div className="flex items-center justify-between mt-3">
+
+        {/* Buddy-only checkbox with clean design */}
+        <div className="bg-fairway-50 border border-fairway-200 p-3 rounded-lg my-4 flex items-center">
+          <input
+            type="checkbox"
+            id="buddy-only"
+            className="mr-3 h-5 w-5 text-fairway-600 focus:ring-fairway-500 border-gray-300 rounded"
+            checked={buddyOnly}
+            onChange={(e) => setBuddyOnly(e.target.checked)}
+            disabled={isUploading}
+          />
           <div>
+            <label htmlFor="buddy-only" className="font-medium text-fairway-800">
+              Buddy Only Post
+            </label>
+            <p className="text-sm text-gray-600 mt-0.5">
+              This post will only be visible in the "Buddy-Only Posts" feed and only to your golf buddies. 
+              It will not appear in the public feed.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center space-x-3">
             <input 
               type="file" 
               id="image-upload"

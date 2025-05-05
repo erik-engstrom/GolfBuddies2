@@ -462,7 +462,28 @@ const Messages = ({ currentUser: propCurrentUser }) => {
     };
   }, [messagesData, selectedBuddy, loadingMessages]);
 
+  // Listen for token refresh events
+  useEffect(() => {
+    const handleTokenRefresh = (event) => {
+      console.log('Token refresh event detected in Messages component');
+      if (event.detail?.success) {
+        // If the token was refreshed successfully, refetch data
+        refetchMessages();
+      }
+    };
+    
+    // Add event listener for token refresh events
+    window.addEventListener('token-refreshed', handleTokenRefresh);
+    
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('token-refreshed', handleTokenRefresh);
+    };
+  }, [refetchMessages]);
 
+  // messagesContainerRef is already defined above
+  // Using a separate ref for tracking unread count
+  const unreadCountRef = useRef(0);
 
   const handleSendMessage = (e) => {
     e.preventDefault();

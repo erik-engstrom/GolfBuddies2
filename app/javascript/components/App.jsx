@@ -12,9 +12,35 @@ import NavBar from './shared/NavBar';
 import ProfilePage from './profile/ProfilePage';
 import UserProfilePage from './profile/UserProfilePage';
 import Inbox from './messages/Inbox';
+import SinglePostPage from './feed/SinglePostPage';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Listen for token refresh events
+  useEffect(() => {
+    const handleTokenRefresh = (event) => {
+      console.log('Token refresh event detected in App component');
+      if (event.detail?.success) {
+        // Update authentication status
+        setIsAuthenticated(true);
+        console.log('Authentication status updated after token refresh');
+      } else {
+        // If token refresh failed, we should log the user out
+        setIsAuthenticated(false);
+        localStorage.removeItem('golfBuddiesToken');
+        console.log('Token refresh failed, logging out user');
+      }
+    };
+    
+    // Add event listener for token refresh events
+    window.addEventListener('token-refreshed', handleTokenRefresh);
+    
+    // Clean up the event listener
+    return () => {
+      window.removeEventListener('token-refreshed', handleTokenRefresh);
+    };
+  }, []);
   
   // Check if token exists in localStorage
   useEffect(() => {
@@ -69,7 +95,14 @@ const App = () => {
             } />
             
             <Route path="/messages" element={
-              isAuthenticated ? <Inbox /> : <Navigate to="/login" />
+              isAuthenticated ? <Inbox /> : (() => {
+                console.log('Redirecting from /messages to /login - Not authenticated');
+                return <Navigate to="/login" />;
+              })()
+            } />
+            
+            <Route path="/posts/:postId" element={
+              isAuthenticated ? <SinglePostPage /> : <Navigate to="/login" />
             } />
             
             <Route path="*" element={<Navigate to="/" />} />

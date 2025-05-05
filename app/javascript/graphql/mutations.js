@@ -47,13 +47,14 @@ export const SIGN_IN_MUTATION = gql`
 
 // Post mutations
 export const CREATE_POST_MUTATION = gql`
-  mutation CreatePost($content: String!) {
-    createPost(input: {content: $content}) {
+  mutation CreatePost($content: String!, $buddyOnly: Boolean) {
+    createPost(input: {content: $content, buddyOnly: $buddyOnly}) {
       post {
         id
         content
         createdAt
         imageUrl
+        buddyOnly
         user {
           id
           fullName

@@ -5,6 +5,7 @@ module Types
     field :content, String, null: false
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+    field :buddy_only, Boolean, null: true
     
     # Associations
     field :user, Types::UserType, null: false
