@@ -74,6 +74,14 @@ export const GET_USER_PROFILE = gql`
         imageUrl
         likesCount
         commentsCount
+        likes {
+          id
+          user {
+            id
+            fullName
+            profilePictureUrl
+          }
+        }
       }
     }
   }
@@ -132,6 +140,14 @@ export const GET_FEED_POSTS = gql`
         fullName
         profilePictureUrl
       }
+      likes {
+        id
+        user {
+          id
+          fullName
+          profilePictureUrl
+        }
+      }
       comments {
         id
         content
@@ -141,6 +157,14 @@ export const GET_FEED_POSTS = gql`
           id
           fullName
           profilePictureUrl
+        }
+        likes {
+          id
+          user {
+            id
+            fullName
+            profilePictureUrl
+          }
         }
       }
     }
@@ -231,6 +255,14 @@ export const GET_SINGLE_POST = gql`
         fullName
         profilePictureUrl
       }
+      likes {
+        id
+        user {
+          id
+          fullName
+          profilePictureUrl
+        }
+      }
       comments {
         id
         content
@@ -240,6 +272,14 @@ export const GET_SINGLE_POST = gql`
           id
           fullName
           profilePictureUrl
+        }
+        likes {
+          id
+          user {
+            id
+            fullName
+            profilePictureUrl
+          }
         }
       }
     }

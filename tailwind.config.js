@@ -9,6 +9,15 @@ module.exports = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        fadein: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
+        },
+      },
+      animation: {
+        fadein: 'fadein 0.2s ease-in-out',
+      },
       colors: {
         fairway: {
           50: '#f0fdf4',

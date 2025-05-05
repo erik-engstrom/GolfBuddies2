@@ -1,5 +1,5 @@
-// filepath: /Users/erikengstrom/Desktop/GolfBuddies2/app/javascript/components/feed/CommentItem.jsx.backup
-import React, { useEffect, useRef } from 'react';
+// filepath: /Users/erikengstrom/Desktop/GolfBuddies2/app/javascript/components/feed/CommentItem.jsx
+import React, { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -7,6 +7,8 @@ import { TOGGLE_LIKE_MUTATION } from '../../graphql/mutations';
 
 const CommentItem = ({ comment, refetchPosts, isTargetComment = false }) => {
   const commentRef = useRef(null);
+  const likesTooltipRef = useRef(null);
+  const [showLikesTooltip, setShowLikesTooltip] = useState(false);
   
   const [toggleLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE_MUTATION, {
     onCompleted: () => {
@@ -16,6 +18,20 @@ const CommentItem = ({ comment, refetchPosts, isTargetComment = false }) => {
       console.error("Error toggling like on comment:", error);
     }
   });
+
+  // Effect to handle click outside tooltip to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLikesTooltip && likesTooltipRef.current && !likesTooltipRef.current.contains(event.target)) {
+        setShowLikesTooltip(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLikesTooltip]);
 
   // Effect for scrolling to this comment if it's the target
   useEffect(() => {
@@ -89,6 +105,25 @@ const CommentItem = ({ comment, refetchPosts, isTargetComment = false }) => {
               </svg>
               <span>{comment.likesCount || 0} {comment.likesCount === 1 ? 'Like' : 'Likes'}</span>
             </button>
+            {/* Tooltip for showing who liked the comment */}
+            {showLikesTooltip && comment.likes && comment.likes.length > 0 && (
+              <div 
+                ref={likesTooltipRef}
+                className="absolute z-10 bg-white shadow-md rounded-md p-2 mt-1 text-xs text-gray-700"
+                style={{ minWidth: '120px' }}
+              >
+                <div className="whitespace-nowrap overflow-hidden text-ellipsis">
+                  {comment.likes.map((like, index) => (
+                    <span key={like.id}>
+                      <Link to={`/users/${like.user.id}`} className="hover:underline">
+                        {like.user.fullName}
+                      </Link>
+                      {index < comment.likes.length - 1 && ', '}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

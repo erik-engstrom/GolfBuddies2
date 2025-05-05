@@ -19,6 +19,7 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
   const [error, setError] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [showLikesTooltip, setShowLikesTooltip] = useState(false);
   
   // Cache post data in localStorage for restricted post messages
   useEffect(() => {
@@ -187,6 +188,23 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
     };
   }, [showPostOptions, post.id]);
   
+  // Use a ref for the tooltip container
+  const likesTooltipRef = useRef(null);
+
+  // Effect to handle click outside tooltip to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLikesTooltip && likesTooltipRef.current && !likesTooltipRef.current.contains(event.target)) {
+        setShowLikesTooltip(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLikesTooltip]);
+
   return (
     <div 
       id={`post-${post.id}`}
@@ -314,16 +332,51 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
       </div>
       
       <div className="flex border-t border-b py-2 mb-3">
-        <button 
-          onClick={handleLikeToggle}
-          disabled={likeLoading}
-          className="flex items-center mr-4 text-gray-500 hover:text-fairway-600"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          <span>{post.likesCount || 0} {post.likesCount === 1 ? 'Like' : 'Likes'}</span>
-        </button>
+        <div className="relative pt-1 pb-2">
+          <button 
+            onClick={handleLikeToggle}
+            disabled={likeLoading}
+            className="flex items-center mr-4 text-gray-500 hover:text-fairway-600"
+            onMouseEnter={() => post.likesCount > 0 && setShowLikesTooltip(true)}
+            onMouseLeave={() => setShowLikesTooltip(false)}
+            ref={likesTooltipRef}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill={post.likesCount > 0 ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span>{post.likesCount || 0} {post.likesCount === 1 ? 'Like' : 'Likes'}</span>
+          </button>
+          
+          {showLikesTooltip && post.likes && post.likes.length > 0 && (
+            <div className="absolute transform-gpu -translate-x-1/4 top-full mt-2 bg-white shadow-lg rounded-md py-2 px-3 w-48 z-10 text-sm border border-gray-200 transform transition-opacity duration-200 opacity-100 animate-fadein">
+              <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-t border-l border-gray-200 transform rotate-45"></div>
+              <h4 className="font-medium text-fairway-700 mb-2 border-b pb-1">Liked by:</h4>
+              <ul className="max-h-32 overflow-y-auto">
+                {post.likes.map(like => (
+                  <li key={like.id} className="mb-1">
+                    <Link
+                      to={`/users/${like.user.id}`}
+                      className="flex items-center hover:bg-fairway-50 p-1 rounded transition duration-150"
+                    >
+                      {like.user.profilePictureUrl ? (
+                        <img
+                          src={like.user.profilePictureUrl}
+                          alt={like.user.fullName}
+                          className="w-5 h-5 rounded-full mr-2 object-cover"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-fairway-300 flex items-center justify-center mr-2 text-xs">
+                          {like.user.fullName.charAt(0)}
+                        </div>
+                      )}
+                      <span className="text-fairway-800">{like.user.fullName}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         
         <button 
           onClick={() => setShowComments(!showComments)}
@@ -373,6 +426,38 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
           onClose={() => setIsDeleteConfirmOpen(false)} 
           refetchPosts={refetchPosts}
         />
+      )}
+      
+      {/* Likes Tooltip */}
+      {showLikesTooltip && post.likes && post.likes.length > 0 && (
+        <div 
+          ref={likesTooltipRef}
+          className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200"
+        >
+          <div className="p-2 text-sm text-gray-700">
+            {post.likes.map((like, index) => (
+              <div key={like.id} className="flex items-center py-1">
+                {like.user.profilePictureUrl ? (
+                  <img 
+                    src={like.user.profilePictureUrl} 
+                    alt={like.user.fullName} 
+                    className="w-8 h-8 rounded-full mr-2"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-fairway-300 flex items-center justify-center mr-2">
+                    <span className="text-fairway-800 font-semibold">
+                      {like.user.fullName.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <span className="text-gray-800">{like.user.fullName}</span>
+                {index < post.likes.length - 1 && (
+                  <div className="w-full h-px bg-gray-200 mx-2"></div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
