@@ -95,35 +95,51 @@ const CommentItem = ({ comment, refetchPosts, isTargetComment = false }) => {
             <p className="text-xs text-gray-500 mr-4">
               {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
             </p>
-            <button 
-              onClick={handleLikeToggle}
-              disabled={likeLoading}
-              className="flex items-center text-xs text-gray-500 hover:text-fairway-600"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill={comment.likesCount > 0 ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span>{comment.likesCount || 0} {comment.likesCount === 1 ? 'Like' : 'Likes'}</span>
-            </button>
-            {/* Tooltip for showing who liked the comment */}
-            {showLikesTooltip && comment.likes && comment.likes.length > 0 && (
-              <div 
+            <div className="relative pt-1 pb-2">
+              <button 
+                onClick={handleLikeToggle}
+                disabled={likeLoading}
+                className="flex items-center text-xs text-gray-500 hover:text-fairway-600"
+                onMouseEnter={() => comment.likesCount > 0 && setShowLikesTooltip(true)}
+                onMouseLeave={() => setShowLikesTooltip(false)}
                 ref={likesTooltipRef}
-                className="absolute z-10 bg-white shadow-md rounded-md p-2 mt-1 text-xs text-gray-700"
-                style={{ minWidth: '120px' }}
               >
-                <div className="whitespace-nowrap overflow-hidden text-ellipsis">
-                  {comment.likes.map((like, index) => (
-                    <span key={like.id}>
-                      <Link to={`/users/${like.user.id}`} className="hover:underline">
-                        {like.user.fullName}
-                      </Link>
-                      {index < comment.likes.length - 1 && ', '}
-                    </span>
-                  ))}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill={comment.likesCount > 0 ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span>{comment.likesCount || 0} {comment.likesCount === 1 ? 'Like' : 'Likes'}</span>
+              </button>
+              
+              {showLikesTooltip && comment.likes && comment.likes.length > 0 && (
+                <div className="absolute transform-gpu -translate-x-1/4 top-full mt-2 bg-white shadow-lg rounded-md py-2 px-3 w-44 z-10 text-xs border border-gray-200 transform transition-opacity duration-200 opacity-100 animate-fadein">
+                  <div className="absolute -top-2 left-6 w-3 h-3 bg-white border-t border-l border-gray-200 transform rotate-45"></div>
+                  <h4 className="font-medium text-fairway-700 mb-2 border-b pb-1">Liked by:</h4>
+                  <ul className="max-h-28 overflow-y-auto">
+                    {comment.likes.map(like => (
+                      <li key={like.id} className="mb-1">
+                        <Link
+                          to={`/users/${like.user.id}`}
+                          className="flex items-center hover:bg-fairway-50 p-1 rounded transition duration-150"
+                        >
+                          {like.user.profilePictureUrl ? (
+                            <img
+                              src={like.user.profilePictureUrl}
+                              alt={like.user.fullName}
+                              className="w-4 h-4 rounded-full mr-2 object-cover"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-fairway-300 flex items-center justify-center mr-2 text-xs">
+                              {like.user.fullName.charAt(0)}
+                            </div>
+                          )}
+                          <span className="text-fairway-800 text-xs">{like.user.fullName}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

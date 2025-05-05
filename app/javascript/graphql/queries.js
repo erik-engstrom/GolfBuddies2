@@ -82,6 +82,25 @@ export const GET_USER_PROFILE = gql`
             profilePictureUrl
           }
         }
+        comments {
+          id
+          content
+          createdAt
+          likesCount
+          user {
+            id
+            fullName
+            profilePictureUrl
+          }
+          likes {
+            id
+            user {
+              id
+              fullName
+              profilePictureUrl
+            }
+          }
+        }
       }
     }
   }
