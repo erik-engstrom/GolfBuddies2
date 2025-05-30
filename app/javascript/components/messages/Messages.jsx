@@ -131,21 +131,25 @@ const Messages = ({ currentUser: propCurrentUser }) => {
                   broadcast: true // Ensure all components see this update
                 });
                 
-                // Also try a more direct DOM update for the notification badge
-                setTimeout(() => {
-                  // Force a UI update by dispatching a custom event
-                  window.dispatchEvent(new CustomEvent('message-read', { 
-                    detail: { userId: buddyId, totalCount: newTotalCount } 
-                  }));
-                  
-                  // Store in localStorage as a backup way to communicate with navbar
-                  try {
-                    localStorage.setItem('unreadMessagesCount', newTotalCount.toString());
-                    localStorage.setItem('unreadMessagesCountUpdated', Date.now().toString());
-                  } catch (e) {
-                    console.log('Could not store in localStorage', e);
+                // Force a UI update by dispatching a custom event immediately
+                window.dispatchEvent(new CustomEvent('message-read', { 
+                  detail: { 
+                    totalCount: newTotalCount,
+                    byBuddy: updatedCountByBuddy,
+                    source: 'mark-all-read-mutation'
+                  } 
+                }));
+                
+                // Store in localStorage as a backup way to communicate with navbar
+                try {
+                  localStorage.setItem('unreadMessagesCount', newTotalCount.toString());
+                  localStorage.setItem('unreadMessagesCountUpdated', Date.now().toString());
+                  if (updatedCountByBuddy) {
+                    localStorage.setItem('unreadMessagesCountByBuddy', JSON.stringify(updatedCountByBuddy));
                   }
-                }, 0);
+                } catch (e) {
+                  console.log('Could not store in localStorage', e);
+                }
               }
             } catch (e) {
               console.error('Error directly modifying cache:', e);
@@ -264,136 +268,9 @@ const Messages = ({ currentUser: propCurrentUser }) => {
             console.log(`Marking all messages as read for buddy ${buddy.id} (${unreadCount} unread messages)`);
 
             // Call the mutation to mark all messages as read
-            // The optimistic response will immediately update the UI
             markAllMessagesAsRead({ 
               variables: { buddyId: buddy.id }
-            });                // Force immediate UI updates for the unread indicators
-                // 1. Update for the buddy list in this component
-                try {
-                  const buddyData = client.readQuery({ query: GET_BUDDIES });
-                  if (buddyData?.buddies) {
-                    // Update the local cache to reflect the unread count changes
-                    const updatedBuddies = buddyData.buddies.map(b => {
-                      if (b.id === buddy.id) {
-                        console.log(`Updating unread count for buddy ${buddy.id} to 0 in cache`);
-                        return { 
-                          ...b,
-                          unreadMessagesCount: 0 // Set unread count to zero directly on buddy object
-                        };
-                      }
-                      return b;
-                    });
-                
-                client.writeQuery({
-                  query: GET_BUDDIES,
-                  data: {
-                    ...buddyData,
-                    buddies: updatedBuddies,
-                    me: {
-                      ...buddyData.me,
-                      unreadMessagesCountByBuddy: {
-                        ...(buddyData.me.unreadMessagesCountByBuddy || {}),
-                        [buddy.id]: 0
-                      }
-                    }
-                  }
-                });
-              }
-            } catch (e) {
-              console.error('Error updating buddy list:', e);
-            }
-            
-            // 2. Update for the navbar indicator
-            try {
-              const userData = client.readQuery({ query: CURRENT_USER_WITH_NOTIFICATIONS });
-              if (userData?.me) {
-                const oldCount = userData.me.unreadMessagesCountByBuddy?.[buddy.id] || 0;
-                const newTotalCount = Math.max(0, userData.me.unreadMessagesCount - oldCount);
-                
-                const updatedCountByBuddy = {
-                  ...(userData.me.unreadMessagesCountByBuddy || {})
-                };
-                updatedCountByBuddy[buddy.id] = 0;
-                
-                // Write directly to CURRENT_USER_WITH_NOTIFICATIONS cache
-                client.writeQuery({
-                  query: CURRENT_USER_WITH_NOTIFICATIONS,
-                  data: {
-                    me: {
-                      ...userData.me,
-                      unreadMessagesCount: newTotalCount,
-                      unreadMessagesCountByBuddy: updatedCountByBuddy
-                    }
-                  }
-                });
-                
-                // Also use a stronger approach to update the cache for all components
-                // First directly broadcast to all components using this field
-                client.cache.evict({ 
-                  id: 'ROOT_QUERY',
-                  fieldName: 'me'
-                });
-                
-                // Force refresh the cache for all queries that include unreadMessagesCount
-                client.cache.gc();
-                
-                // Now write the updated data back to the cache
-                client.cache.writeQuery({
-                  query: CURRENT_USER_WITH_NOTIFICATIONS,
-                  data: {
-                    me: {
-                      ...userData.me,
-                      unreadMessagesCount: newTotalCount,
-                      unreadMessagesCountByBuddy: updatedCountByBuddy
-                    }
-                  }
-                });
-                
-                // Find the cache ID for the current user and directly update fields
-                const currentUserCacheId = client.cache.identify({ 
-                  __typename: 'User', 
-                  id: userData.me.id 
-                });
-                
-                if (currentUserCacheId) {
-                  client.cache.modify({
-                    id: currentUserCacheId,
-                    fields: {
-                      unreadMessagesCount() {
-                        return newTotalCount;
-                      },
-                      unreadMessagesCountByBuddy() {
-                        return updatedCountByBuddy;
-                      }
-                    }
-                  });
-                }
-                
-                console.log('Updated navbar notification count:', {
-                  oldTotal: userData.me.unreadMessagesCount,
-                  newTotal: newTotalCount,
-                  buddyId: buddy.id,
-                  buddyOldCount: oldCount
-                });
-                
-                // Directly dispatch an event to force UI components to update
-                console.log('Dispatching message-read event with total count:', newTotalCount);
-                window.dispatchEvent(new CustomEvent('message-read', { 
-                  detail: { userId: buddy.id, totalCount: newTotalCount } 
-                }));
-                
-                // Also use localStorage as a backup communication channel
-                try {
-                  console.log('Updating localStorage unreadMessagesCount to:', newTotalCount);
-                  localStorage.setItem('unreadMessagesCount', newTotalCount.toString());
-                  localStorage.setItem('unreadMessagesCountUpdated', Date.now().toString());
-                } catch (e) {
-                  console.log('Could not store in localStorage', e);
-                }
-              }
-            } catch (e) {
-              console.error('Error updating notification badge:', e);
-            }
+            });
           }
         }
       } catch (e) {

@@ -8,6 +8,7 @@ module Mutations
     argument :content, String, required: true
     argument :image, ApolloUploadServer::Upload, required: false
     argument :buddy_only, Boolean, required: false, default_value: false
+    argument :include_location, Boolean, required: false, default_value: false
     
     # Location arguments
     argument :latitude, Float, required: false
@@ -16,25 +17,22 @@ module Mutations
     argument :city, String, required: false
     argument :state, String, required: false
     argument :zip_code, String, required: false
-    argument :zipCode, String, required: false
     argument :country, String, required: false
 
-    def resolve(content:, image: nil, buddy_only: false, **location_args)
+    def resolve(content:, image: nil, buddy_only: false, include_location: false, **location_args)
       # Ensure current user is signed in
       unless context[:current_user]
         return { post: nil, errors: ["You must be signed in to create a post"] }
       end
       
-      # Process zipCode to zip_code conversion
-      if location_args.key?(:zipCode) && !location_args.key?(:zip_code)
-        location_args[:zip_code] = location_args.delete(:zipCode)
-      end
+      # Filter location arguments based on include_location flag
+      filtered_location_args = include_location ? location_args : {}
       
       # Create the post
       post = context[:current_user].posts.new(
         content: content,
         buddy_only: buddy_only,
-        **location_args
+        **filtered_location_args
       )
 
       # Attach image if provided

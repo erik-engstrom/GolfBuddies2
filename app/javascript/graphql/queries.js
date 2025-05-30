@@ -61,24 +61,32 @@ export const GET_USER_PROFILE = gql`
             profilePictureUrl
           }
         }
-        comments {
-          id
-          content
-          createdAt
-          likesCount
-          likedByCurrentUser
-          user {
-            id
-            fullName
-            profilePictureUrl
-          }
-          likes {
-            id
-            user {
+        comments(first: 5) {
+          edges {
+            node {
               id
-              fullName
-              profilePictureUrl
+              content
+              createdAt
+              likesCount
+              likedByCurrentUser
+              user {
+                id
+                fullName
+                profilePictureUrl
+              }
+              likes {
+                id
+                user {
+                  id
+                  fullName
+                  profilePictureUrl
+                }
+              }
             }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
           }
         }
       }

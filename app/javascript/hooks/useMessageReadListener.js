@@ -127,7 +127,7 @@ export const useMessageReadListener = (initialCount = 0, refreshCallback = null)
           console.log('Could not store count in localStorage', e);
         }
         
-        // If a refresh callback was provided, call it
+        // If a refresh callback was provided, call it immediately
         if (refreshCallback && typeof refreshCallback === 'function') {
           try {
             // If this is a forced update, mark it as such
@@ -136,10 +136,8 @@ export const useMessageReadListener = (initialCount = 0, refreshCallback = null)
               source: 'event-listener'
             };
             
-            // Use a slight delay for the callback to ensure state updates first
-            setTimeout(() => {
-              refreshCallback(callbackDetail);
-            }, 0);
+            // Call the callback synchronously to ensure immediate UI updates
+            refreshCallback(callbackDetail);
           } catch (e) {
             console.error('Error in refresh callback:', e);
           }
