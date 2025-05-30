@@ -125,8 +125,40 @@ export const CREATE_COMMENT_MUTATION = gql`
 export const TOGGLE_LIKE_MUTATION = gql`
   mutation ToggleLike($likeableId: ID!, $likeableType: String!) {
     toggleLike(input: {likeableId: $likeableId, likeableType: $likeableType}) {
-      likeable
       liked
+      comment {
+        id
+        content
+        createdAt
+        likesCount
+        likedByCurrentUser
+        likes {
+          id
+          user {
+            id
+            fullName
+            profilePictureUrl
+          }
+        }
+        user {
+          id
+          fullName
+          profilePictureUrl
+        }
+      }
+      post {
+        id
+        likesCount
+        likedByCurrentUser
+        likes {
+          id
+          user {
+            id
+            fullName
+            profilePictureUrl
+          }
+        }
+      }
       errors
     }
   }

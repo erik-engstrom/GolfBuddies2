@@ -11,8 +11,30 @@ const CommentItem = ({ comment, refetchPosts, isTargetComment = false }) => {
   const [showLikesTooltip, setShowLikesTooltip] = useState(false);
   
   const [toggleLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE_MUTATION, {
-    onCompleted: () => {
-      refetchPosts();
+    update: (cache, { data }) => {
+      if (data?.toggleLike?.comment) {
+        // Update the comment in the cache directly
+        const updatedComment = data.toggleLike.comment;
+        
+        // Update the cache by modifying the comment object
+        cache.modify({
+          id: cache.identify(comment),
+          fields: {
+            likesCount() {
+              return updatedComment.likesCount;
+            },
+            likedByCurrentUser() {
+              return updatedComment.likedByCurrentUser;
+            },
+            likes() {
+              return updatedComment.likes;
+            }
+          }
+        });
+      }
+    },
+    onCompleted: (data) => {
+      console.log('Like toggle completed:', data);
     },
     onError: (error) => {
       console.error("Error toggling like on comment:", error);
@@ -99,12 +121,12 @@ const CommentItem = ({ comment, refetchPosts, isTargetComment = false }) => {
               <button 
                 onClick={handleLikeToggle}
                 disabled={likeLoading}
-                className="flex items-center text-xs text-gray-500 hover:text-fairway-600"
+                className={`flex items-center text-xs hover:text-fairway-600 ${comment.likedByCurrentUser ? 'text-red-500' : 'text-gray-500'}`}
                 onMouseEnter={() => comment.likesCount > 0 && setShowLikesTooltip(true)}
                 onMouseLeave={() => setShowLikesTooltip(false)}
                 ref={likesTooltipRef}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill={comment.likesCount > 0 ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill={comment.likedByCurrentUser ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
                 <span>{comment.likesCount || 0} {comment.likesCount === 1 ? 'Like' : 'Likes'}</span>

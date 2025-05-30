@@ -66,6 +66,7 @@ export const GET_USER_PROFILE = gql`
           content
           createdAt
           likesCount
+          likedByCurrentUser
           user {
             id
             fullName
@@ -173,23 +174,19 @@ export const GET_BUDDY_REQUESTS = gql`
 `;
 
 export const GET_BUDDIES = gql`
-  query GetBuddies($cursor: String) {
-    buddies(first: 10, after: $cursor) {
-      edges {
-        node {
-          id
-          fullName
-          username
-          profilePictureUrl
-          handicap
-          city
-          state
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
+  query GetBuddies {
+    buddies {
+      id
+      fullName
+      username
+      profilePictureUrl
+      handicap
+      city
+      state
+    }
+    me {
+      id
+      unreadMessagesCountByBuddy
     }
   }
 `;

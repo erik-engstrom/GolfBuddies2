@@ -62,14 +62,14 @@ const CommentsSection = ({ post, refetchPosts, targetCommentId = null }) => {
         </div>
       </form>
       
-      {post.comments && post.comments.length > 0 ? (
+      {post.comments && post.comments.edges && post.comments.edges.length > 0 ? (
         <div className="space-y-3">
-          {post.comments.map(comment => (
+          {post.comments.edges.map(edge => (
             <CommentItem 
-              key={comment.id} 
-              comment={comment} 
+              key={edge.node.id} 
+              comment={edge.node} 
               refetchPosts={refetchPosts}
-              isTargetComment={comment.id === targetCommentId}
+              isTargetComment={edge.node.id === targetCommentId}
             />
           ))}
         </div>

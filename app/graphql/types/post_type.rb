@@ -23,6 +23,7 @@ module Types
     # Computed fields
     field :likes_count, Integer, null: false
     field :comments_count, Integer, null: false
+    field :liked_by_current_user, Boolean, null: false
     
     # Associations
     field :user, Types::UserType, null: false
@@ -37,6 +38,11 @@ module Types
     
     def comments_count
       object.comments.count
+    end
+
+    def liked_by_current_user
+      return false unless context[:current_user]
+      object.likes.exists?(user: context[:current_user])
     end
     
     def comments(order_by:)

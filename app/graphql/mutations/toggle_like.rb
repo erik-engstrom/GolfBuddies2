@@ -1,8 +1,9 @@
 module Mutations
   class ToggleLike < BaseMutation
     # Define what our mutation returns
-    field :likeable, GraphQL::Types::JSON, null: true
     field :liked, Boolean, null: true
+    field :comment, Types::CommentType, null: true
+    field :post, Types::PostType, null: true
     field :errors, [String], null: false
 
     # Define the arguments this mutation accepts
@@ -13,8 +14,9 @@ module Mutations
       # Check if user is authenticated
       unless context[:current_user]
         return {
-          likeable: nil,
           liked: nil,
+          comment: nil,
+          post: nil,
           errors: ["You need to be logged in to like content"]
         }
       end
@@ -28,16 +30,18 @@ module Mutations
         likeable = Comment.find_by(id: likeable_id)
       else
         return {
-          likeable: nil,
           liked: nil,
+          comment: nil,
+          post: nil,
           errors: ["Invalid likeable type"]
         }
       end
       
       unless likeable
         return {
-          likeable: nil,
           liked: nil,
+          comment: nil,
+          post: nil,
           errors: ["Content not found"]
         }
       end
@@ -53,8 +57,9 @@ module Mutations
         # If already liked, unlike it
         existing_like.destroy
         {
-          likeable: { id: likeable.id, type: likeable_type },
           liked: false,
+          comment: likeable_type == "Comment" ? likeable : nil,
+          post: likeable_type == "Post" ? likeable : nil,
           errors: []
         }
       else
@@ -66,14 +71,16 @@ module Mutations
 
         if like.save
           {
-            likeable: { id: likeable.id, type: likeable_type },
             liked: true,
+            comment: likeable_type == "Comment" ? likeable : nil,
+            post: likeable_type == "Post" ? likeable : nil,
             errors: []
           }
         else
           {
-            likeable: nil,
             liked: nil,
+            comment: nil,
+            post: nil,
             errors: like.errors.full_messages
           }
         end

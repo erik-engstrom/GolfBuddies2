@@ -14,9 +14,15 @@ module Types
     
     # Custom fields
     field :likes_count, Integer, null: false
-    
+    field :liked_by_current_user, Boolean, null: false
+
     def likes_count
       object.likes.count
+    end
+
+    def liked_by_current_user
+      return false unless context[:current_user]
+      object.likes.exists?(user: context[:current_user])
     end
   end
 end

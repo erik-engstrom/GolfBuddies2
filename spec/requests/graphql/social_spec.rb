@@ -113,8 +113,25 @@ RSpec.describe 'Social GraphQL API', type: :request do
       let(:query) do
         <<~GQL
           mutation ToggleLike($likeableId: ID!, $likeableType: String!) {
-            toggleLike(likeableId: $likeableId, likeableType: $likeableType) {
+            toggleLike(input: {likeableId: $likeableId, likeableType: $likeableType}) {
               liked
+              comment {
+                id
+                likesCount
+                likedByCurrentUser
+                likes {
+                  id
+                  user {
+                    id
+                    fullName
+                  }
+                }
+              }
+              post {
+                id
+                likesCount
+                likedByCurrentUser
+              }
               errors
             }
           }
@@ -154,20 +171,52 @@ RSpec.describe 'Social GraphQL API', type: :request do
         }.to change(Like, :count).by(-1)
       end
       
-      it 'supports liking comments as well' do
+      it 'supports liking comments and returns updated comment data' do
         comment = create(:comment)
         variables = { 
           likeableId: comment.id,
           likeableType: 'Comment'
         }
-        
+
         expect {
           result = GolfBuddies2Schema.execute(query, variables: variables, context: context)
           data = result.to_h['data']['toggleLike']
           
           expect(data['liked']).to be true
           expect(data['errors']).to be_empty
+          expect(data['comment']).not_to be_nil
+          expect(data['comment']['id']).to eq(comment.id.to_s)
+          expect(data['comment']['likesCount']).to eq(1)
+          expect(data['comment']['likedByCurrentUser']).to be true
+          expect(data['comment']['likes'].length).to eq(1)
+          expect(data['comment']['likes'][0]['user']['id']).to eq(current_user.id.to_s)
+          expect(data['post']).to be_nil
         }.to change(Like, :count).by(1)
+      end
+      
+      it 'supports unliking comments and returns updated comment data' do
+        comment = create(:comment)
+        # Create a like first
+        create(:like, user: current_user, likeable: comment)
+        
+        variables = { 
+          likeableId: comment.id,
+          likeableType: 'Comment'
+        }
+
+        expect {
+          result = GolfBuddies2Schema.execute(query, variables: variables, context: context)
+          data = result.to_h['data']['toggleLike']
+          
+          expect(data['liked']).to be false
+          expect(data['errors']).to be_empty
+          expect(data['comment']).not_to be_nil
+          expect(data['comment']['id']).to eq(comment.id.to_s)
+          expect(data['comment']['likesCount']).to eq(0)
+          expect(data['comment']['likedByCurrentUser']).to be false
+          expect(data['comment']['likes']).to be_empty
+          expect(data['post']).to be_nil
+        }.to change(Like, :count).by(-1)
       end
     end
   end
