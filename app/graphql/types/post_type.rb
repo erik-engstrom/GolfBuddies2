@@ -7,15 +7,29 @@ module Types
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     field :buddy_only, Boolean, null: true
     
-    # Associations
-    field :user, Types::UserType, null: false
-    field :comments, [Types::CommentType], null: false
-    field :likes, [Types::LikeType], null: false
+    # Location fields
+    field :latitude, Float, null: true
+    field :longitude, Float, null: true
+    field :address, String, null: true
+    field :city, String, null: true
+    field :state, String, null: true
+    field :zip_code, String, null: true, camelize: false
+    field :country, String, null: true
+    field :distance, Float, null: true, description: "Distance from the search coordinates (only present when searching by location)"
     
-    # Custom fields
+    # Image field
+    field :image_url, String, null: true
+    
+    # Computed fields
     field :likes_count, Integer, null: false
     field :comments_count, Integer, null: false
-    field :image_url, String, null: true
+    
+    # Associations
+    field :user, Types::UserType, null: false
+    field :likes, [Types::LikeType], null: false
+    field :comments, Types::CommentType.connection_type, null: false do
+      argument :order_by, String, required: false, default_value: "newest"
+    end
     
     def likes_count
       object.likes.count
@@ -23,6 +37,26 @@ module Types
     
     def comments_count
       object.comments.count
+    end
+    
+    def comments(order_by:)
+      case order_by
+      when "oldest"
+        object.comments.order(created_at: :asc)
+      else # "newest"
+        object.comments.order(created_at: :desc)
+      end
+    end
+    
+    def distance
+      # Distance will be populated in resolver when doing location-based queries
+      # Return a fallback value of nil for regular queries
+      object.respond_to?(:distance) ? object.distance : nil
+    end
+    
+    # Use a single method that will be properly camelized by GraphQL
+    def zip_code
+      object.zip_code
     end
     
     def image_url

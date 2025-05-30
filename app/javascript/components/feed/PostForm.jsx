@@ -10,6 +10,9 @@ const PostForm = ({ refetchPosts }) => {
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [buddyOnly, setBuddyOnly] = useState(false);
+  const [includeLocation, setIncludeLocation] = useState(false);
+  const [userLocationStatus, setUserLocationStatus] = useState(null); // null, 'loading', 'success', 'error'
+  const [userCoordinates, setUserCoordinates] = useState(null);
   const fileInputRef = useRef(null);
 
   const [createPost, { loading }] = useMutation(CREATE_POST_MUTATION, {
@@ -92,6 +95,9 @@ const PostForm = ({ refetchPosts }) => {
     // Reset buddy-only state
     setBuddyOnly(false);
     
+    // Reset location state
+    setIncludeLocation(false);
+    
     // Clear error messages
     setError('');
     
@@ -123,10 +129,20 @@ const PostForm = ({ refetchPosts }) => {
     // Set uploading state to show feedback to user
     setIsUploading(true);
     
-    // Submit the post with buddyOnly flag
+    // Prepare location data if user wants to include it
+    const locationVariables = includeLocation && userCoordinates ? {
+      includeLocation: true,
+      latitude: userCoordinates.lat,
+      longitude: userCoordinates.lng
+    } : { includeLocation: false };
+    
+    // Submit the post with all variables
     createPost({ 
-      variables: { content, buddyOnly }
-      // We're now handling the cache updates directly in the mutation's update function
+      variables: { 
+        content, 
+        buddyOnly,
+        ...locationVariables
+      }
     });
   };
 
@@ -165,6 +181,41 @@ const PostForm = ({ refetchPosts }) => {
     setImagePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  // Detect user location
+  const detectUserLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      setUserLocationStatus('error');
+      return;
+    }
+
+    setUserLocationStatus('loading');
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserCoordinates({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setUserLocationStatus('success');
+        setIncludeLocation(true); // Auto-enable location attachment
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        setUserLocationStatus('error');
+        setError('Unable to retrieve your location. Please check browser permissions.');
+      }
+    );
+  };
+
+  // Reset location status if user disables location
+  const handleLocationToggle = (value) => {
+    setIncludeLocation(value);
+    if (value && !userCoordinates && userLocationStatus !== 'loading') {
+      detectUserLocation();
     }
   };
 
@@ -211,25 +262,69 @@ const PostForm = ({ refetchPosts }) => {
           </div>
         )}
 
-        {/* Buddy-only checkbox with clean design */}
-        <div className="bg-fairway-50 border border-fairway-200 p-3 rounded-lg my-4 flex items-center">
-          <input
-            type="checkbox"
-            id="buddy-only"
-            className="mr-3 h-5 w-5 text-fairway-600 focus:ring-fairway-500 border-gray-300 rounded"
-            checked={buddyOnly}
-            onChange={(e) => setBuddyOnly(e.target.checked)}
-            disabled={isUploading}
-          />
-          <div>
-            <label htmlFor="buddy-only" className="font-medium text-fairway-800">
-              Buddy Only Post
-            </label>
-            <p className="text-sm text-gray-600 mt-0.5">
-              This post will only be visible in the "Buddy-Only Posts" feed and only to your golf buddies. 
-              It will not appear in the public feed.
-            </p>
+        {/* Post options section */}
+        <div className="bg-fairway-50 border border-fairway-200 p-3 rounded-lg my-4 space-y-3">
+          {/* Buddy-only checkbox */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="buddy-only"
+              className="mr-3 h-5 w-5 text-fairway-600 focus:ring-fairway-500 border-gray-300 rounded"
+              checked={buddyOnly}
+              onChange={(e) => setBuddyOnly(e.target.checked)}
+              disabled={isUploading}
+            />
+            <div>
+              <label htmlFor="buddy-only" className="font-medium text-fairway-800">
+                Buddy Only Post
+              </label>
+              <p className="text-sm text-gray-600 mt-0.5">
+                This post will only be visible in the "Buddy-Only Posts" feed and only to your golf buddies. 
+                It will not appear in the public feed.
+              </p>
+            </div>
           </div>
+          
+          {/* Location inclusion checkbox */}
+          <div className="flex items-center pt-2 border-t border-fairway-200">
+            <input
+              type="checkbox"
+              id="include-location"
+              className="mr-3 h-5 w-5 text-fairway-600 focus:ring-fairway-500 border-gray-300 rounded"
+              checked={includeLocation}
+              onChange={(e) => handleLocationToggle(e.target.checked)}
+              disabled={isUploading}
+            />
+            <div>
+              <label htmlFor="include-location" className="font-medium text-fairway-800 flex items-center">
+                Include Location
+                {userLocationStatus === 'loading' && (
+                  <span className="ml-2 inline-block animate-spin h-4 w-4 border-2 border-fairway-500 rounded-full border-t-transparent"></span>
+                )}
+                {userLocationStatus === 'success' && (
+                  <span className="ml-2 text-green-600 text-sm">✓ Location detected</span>
+                )}
+                {userLocationStatus === 'error' && (
+                  <span className="ml-2 text-red-600 text-sm">Location error</span>
+                )}
+              </label>
+              <p className="text-sm text-gray-600 mt-0.5">
+                Add your current location to this post so others can find golf content near them.
+              </p>
+            </div>
+          </div>
+          
+          {/* Error and success messages */}
+          {error && (
+            <p className="text-sm text-red-600 mt-2">
+              {error}
+            </p>
+          )}
+          {includeLocation && userLocationStatus === 'success' && userCoordinates && (
+            <p className="text-sm text-green-600 mt-2">
+              Location detected: {userCoordinates.lat.toFixed(4)}, {userCoordinates.lng.toFixed(4)}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-3">

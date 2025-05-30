@@ -68,13 +68,27 @@ const MessageSubscription = ({ userId, onNewMessage }) => {
           // Check if we have valid messageReceived data
           if (responseData.messageReceived) {
             newMessage = responseData.messageReceived;
-            console.log('Received new message:', newMessage.id);
+            if (newMessage) {
+              console.log('Received new message:', newMessage.id);
+            } else {
+              // Handle null message response - this could be a ping or reconnect event
+              console.log('Received null message in subscription - treating as reconnection event');
+              // Notify parent component this might be a reconnection event
+              if (onNewMessage) {
+                onNewMessage({ type: 'reconnect' });
+              }
+              return;
+            }
           } 
           // Handle cross-subscription data (when messageReadStatusUpdated comes through messageReceived)
           else if (responseData.messageReadStatusUpdated) {
-            console.log('Received message read status in message subscription:', responseData.messageReadStatusUpdated.id);
-            // Process this using the read status handler
-            handleMessageReadStatus(responseData.messageReadStatusUpdated);
+            if (responseData.messageReadStatusUpdated) {
+              console.log('Received message read status in message subscription:', responseData.messageReadStatusUpdated.id);
+              // Process this using the read status handler
+              handleMessageReadStatus(responseData.messageReadStatusUpdated);
+            } else {
+              console.log('Received null read status update - treating as reconnection event');
+            }
             return;
           }
           else {
@@ -164,9 +178,14 @@ const MessageSubscription = ({ userId, onNewMessage }) => {
       // Validate we have a proper message object
       if (!updatedMessage) {
         console.warn('Empty message in handleMessageReadStatus');
+        // This could be a reconnect event, force a refresh of data
+        if (onNewMessage) {
+          onNewMessage({ type: 'reconnect' });
+        }
         return;
       }
       
+      // Validate all required fields are present
       if (!updatedMessage.id || !updatedMessage.sender || !updatedMessage.receiver) {
         console.warn('Incomplete message object in handleMessageReadStatus:', updatedMessage);
         return;
@@ -191,6 +210,10 @@ const MessageSubscription = ({ userId, onNewMessage }) => {
       }
     } catch (err) {
       console.error('Error in handleMessageReadStatus:', err);
+      // On error, trigger a data refresh to recover
+      if (onNewMessage) {
+        onNewMessage({ type: 'reconnect' });
+      }
     }
   };
 
@@ -228,6 +251,14 @@ const MessageSubscription = ({ userId, onNewMessage }) => {
           
           if (responseData.messageReadStatusUpdated) {
             updatedMessage = responseData.messageReadStatusUpdated;
+            if (!updatedMessage) {
+              console.log('Received null message in read status update - treating as reconnection event');
+              // Notify parent component this might be a reconnection event
+              if (onNewMessage) {
+                onNewMessage({ type: 'reconnect' });
+              }
+              return;
+            }
           }
           // Handle cross-subscription data (if messageReceived comes through messageReadStatusUpdated)
           else if (responseData.messageReceived) {

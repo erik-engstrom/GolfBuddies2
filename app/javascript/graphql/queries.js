@@ -1,46 +1,25 @@
 import { gql } from '@apollo/client';
+import { POST_FRAGMENT, COMMENT_FRAGMENT } from './fragments';
 
 // User queries
 export const CURRENT_USER_QUERY = gql`
   query CurrentUser {
-    me {
+    currentUser {
       id
       email
-      firstName
-      lastName
       fullName
-      handicap
-      playingStyle
+      username
       profilePictureUrl
+      bio
+      handicap
+      favoriteCourse
+      city
+      state
+      zip_code
+      latitude
+      longitude
+      unreadNotificationsCount
       unreadMessagesCount
-      unreadMessagesCountByBuddy
-      buddies {
-        id
-        fullName
-        handicap
-        playingStyle
-        profilePictureUrl
-      }
-      sentBuddyRequests {
-        id
-        status
-        createdAt
-        receiver {
-          id
-          fullName
-          profilePictureUrl
-        }
-      }
-      receivedBuddyRequests {
-        id
-        status
-        createdAt
-        sender {
-          id
-          fullName
-          profilePictureUrl
-        }
-      }
     }
   }
 `;
@@ -145,49 +124,32 @@ export const GET_POSTS = gql`
 `;
 
 export const GET_FEED_POSTS = gql`
-  query GetFeedPosts($buddyOnly: Boolean) {
-    posts(buddyOnly: $buddyOnly) {
-      id
-      content
-      createdAt
-      imageUrl
-      likesCount
-      commentsCount
-      buddyOnly
-      user {
-        id
-        fullName
-        profilePictureUrl
-      }
-      likes {
-        id
-        user {
-          id
-          fullName
-          profilePictureUrl
-        }
-      }
-      comments {
-        id
-        content
-        createdAt
-        likesCount
-        user {
-          id
-          fullName
-          profilePictureUrl
-        }
-        likes {
-          id
-          user {
-            id
-            fullName
-            profilePictureUrl
+  query GetFeedPosts($cursor: String, $locationFilter: LocationFilterInput) {
+    posts(first: 10, after: $cursor, locationFilter: $locationFilter) {
+      edges {
+        node {
+          ...PostFields
+          comments(first: 3) {
+            edges {
+              node {
+                ...CommentFields
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
+  ${POST_FRAGMENT}
+  ${COMMENT_FRAGMENT}
 `;
 
 // Buddy queries
@@ -211,16 +173,38 @@ export const GET_BUDDY_REQUESTS = gql`
 `;
 
 export const GET_BUDDIES = gql`
-  query GetBuddies {
-    buddies {
+  query GetBuddies($cursor: String) {
+    buddies(first: 10, after: $cursor) {
+      edges {
+        node {
+          id
+          fullName
+          username
+          profilePictureUrl
+          handicap
+          city
+          state
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+export const GET_BUDDY_SUGGESTIONS = gql`
+  query GetBuddySuggestions {
+    buddySuggestions(first: 5) {
       id
       fullName
+      username
       profilePictureUrl
-      unreadMessagesCount
-    }
-    me {
-      id
-      unreadMessagesCountByBuddy
+      handicap
+      city
+      state
+      mutualBuddiesCount
     }
   }
 `;
@@ -250,10 +234,30 @@ export const SEARCH_USERS = gql`
   query SearchUsers($query: String!) {
     searchUsers(query: $query) {
       id
-      firstName
-      lastName
       fullName
+      username
       profilePictureUrl
+      bio
+      handicap
+      isFollowing
+    }
+  }
+`;
+
+export const VALIDATE_USERNAME = gql`
+  query ValidateUsername($username: String!) {
+    validateUsername(username: $username) {
+      valid
+      message
+    }
+  }
+`;
+
+export const VALIDATE_EMAIL = gql`
+  query ValidateEmail($email: String!) {
+    validateEmail(email: $email) {
+      valid
+      message
     }
   }
 `;
@@ -262,45 +266,178 @@ export const SEARCH_USERS = gql`
 export const GET_SINGLE_POST = gql`
   query GetSinglePost($id: ID!) {
     post(id: $id) {
-      id
-      content
-      createdAt
-      imageUrl
-      likesCount
-      commentsCount
-      buddyOnly
-      user {
-        id
-        fullName
-        profilePictureUrl
-      }
-      likes {
-        id
-        user {
-          id
-          fullName
-          profilePictureUrl
+      ...PostFields
+      comments(first: 10) {
+        edges {
+          node {
+            ...CommentFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
         }
       }
-      comments {
-        id
-        content
-        createdAt
-        likesCount
-        user {
+    }
+  }
+  ${POST_FRAGMENT}
+  ${COMMENT_FRAGMENT}
+`;
+
+export const GET_NOTIFICATIONS = gql`
+  query GetNotifications($cursor: String) {
+    notifications(first: 20, after: $cursor) {
+      edges {
+        node {
           id
-          fullName
-          profilePictureUrl
-        }
-        likes {
-          id
-          user {
+          notificationType
+          message
+          read
+          targetId
+          targetType
+          createdAt
+          actor {
             id
             fullName
             profilePictureUrl
           }
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
+`;
+
+export const GET_CONVERSATIONS = gql`
+  query GetConversations {
+    conversations {
+      id
+      updatedAt
+      lastMessage {
+        id
+        content
+        createdAt
+      }
+      unreadCount
+      otherUser {
+        id
+        fullName
+        profilePictureUrl
+        username
+      }
+    }
+  }
+`;
+
+export const GET_CONVERSATION = gql`
+  query GetConversation($id: ID!, $cursor: String) {
+    conversation(id: $id) {
+      id
+      messages(first: 20, after: $cursor) {
+        edges {
+          node {
+            id
+            content
+            createdAt
+            sender {
+              id
+              fullName
+              profilePictureUrl
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+      otherUser {
+        id
+        fullName
+        profilePictureUrl
+        username
+      }
+    }
+  }
+`;
+
+export const GET_USER_POSTS = gql`
+  query GetUserPosts($userId: ID!, $cursor: String) {
+    userPosts(userId: $userId, first: 10, after: $cursor) {
+      edges {
+        node {
+          ...PostFields
+          comments(first: 3) {
+            edges {
+              node {
+                ...CommentFields
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+  ${POST_FRAGMENT}
+  ${COMMENT_FRAGMENT}
+`;
+
+export const GET_MORE_COMMENTS = gql`
+  query GetMoreComments($postId: ID!, $cursor: String) {
+    post(id: $postId) {
+      id
+      comments(first: 10, after: $cursor) {
+        edges {
+          node {
+            ...CommentFields
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+  ${COMMENT_FRAGMENT}
+`;
+
+export const GET_POSTS_NEAR_ME = gql`
+  query GetPostsNearMe($latitude: Float!, $longitude: Float!, $distance: Float, $cursor: String) {
+    postsNearMe(latitude: $latitude, longitude: $longitude, distance: $distance, first: 10, after: $cursor) {
+      edges {
+        node {
+          ...PostFields
+          comments(first: 3) {
+            edges {
+              node {
+                ...CommentFields
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+  ${POST_FRAGMENT}
+  ${COMMENT_FRAGMENT}
 `;

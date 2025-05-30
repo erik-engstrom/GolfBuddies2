@@ -35,5 +35,8 @@ module Types
     # Notification mutations
     field :mark_notification_as_read, mutation: Mutations::MarkNotificationAsRead
     field :mark_all_notifications_as_read, mutation: Mutations::MarkAllNotificationsAsRead
+    
+    # Location mutations
+    field :update_user_location, mutation: Mutations::UpdateUserLocation
   end
 end

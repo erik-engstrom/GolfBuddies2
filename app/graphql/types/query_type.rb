@@ -30,7 +30,16 @@ module Types
     field :post, Types::PostType, null: true, description: "Returns a post by ID" do
       argument :id, ID, required: true
     end
-    field :posts, [Types::PostType], null: false, description: "Returns a list of posts" do
+    field :posts, Types::PostType.connection_type, null: false, description: "Returns a list of posts" do
+      argument :buddy_only, Boolean, required: false, description: "If true, only returns posts from buddies"
+      argument :location_filter, Types::LocationFilterInputType, required: false, description: "Filter posts by location"
+    end
+    
+    # Location-based post queries
+    field :posts_near_me, Types::PostType.connection_type, null: false, description: "Returns posts near the current user's location" do
+      argument :latitude, Float, required: true
+      argument :longitude, Float, required: true
+      argument :distance, Float, required: false, default_value: 25.0
       argument :buddy_only, Boolean, required: false, description: "If true, only returns posts from buddies"
     end
     
@@ -164,6 +173,49 @@ module Types
           .or(User.where("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", search_term))
           .where.not(id: context[:current_user].id) # Exclude the current user from results
           .limit(20) # Limit the number of results for performance
+    end
+    
+    # Post listing with filters
+    def posts(buddy_only: nil, location_filter: nil)
+      scope = Post.all
+      
+      # Apply buddy filter if requested
+      if buddy_only && context[:current_user]
+        buddy_ids = context[:current_user].buddies.pluck(:id)
+        scope = scope.where(user_id: buddy_ids + [context[:current_user].id])
+      end
+      
+      # Apply location filter if provided
+      if location_filter
+        case location_filter.filter_mode
+        when 'coordinate'
+          # Validate required parameters for coordinate filter
+          if location_filter.latitude && location_filter.longitude
+            distance = location_filter.distance_in_miles || 10.0
+            scope = scope.near([location_filter.latitude, location_filter.longitude], distance)
+          end
+        when 'city'
+          # Validate city parameter
+          if location_filter.city.present?
+            scope = scope.in_city(location_filter.city)
+          end
+        when 'zip_code'
+          # Validate zip code parameter
+          if location_filter.zip_code.present?
+            scope = scope.in_zip_code(location_filter.zip_code)
+          end
+        end
+      end
+      
+      # Return posts in reverse chronological order (newest first)
+      scope.order(created_at: :desc)
+    end
+    
+    # Posts near the current user's location
+    def posts_near_me(latitude:, longitude:, distance: 25.0)
+      Post.near([latitude, longitude], distance, units: :mi)
+          .includes(:user, :likes)
+          .order(created_at: :desc)
     end
     
     # TODO: remove me

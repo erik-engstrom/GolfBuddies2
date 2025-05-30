@@ -3,6 +3,7 @@ import { useQuery } from '@apollo/client';
 import { GET_FEED_POSTS } from '../../graphql/queries';
 import PostForm from './PostForm';
 import Post from './Post';
+import LocationFilter from './LocationFilter';
 import { useLocation } from 'react-router-dom';
 
 const PostListContainer = () => {
@@ -10,9 +11,11 @@ const PostListContainer = () => {
   const [targetPostId, setTargetPostId] = useState(null);
   const [targetCommentId, setTargetCommentId] = useState(null);
   const [buddyOnly, setBuddyOnly] = useState(false);
+  const [locationFilter, setLocationFilter] = useState(null);
+  const [filteredPosts, setFilteredPosts] = useState(null);
   
   const { loading, error, data, refetch } = useQuery(GET_FEED_POSTS, {
-    variables: { buddyOnly },
+    variables: { buddyOnly, locationFilter },
     fetchPolicy: 'network-only', // Always get fresh data
   });
 
@@ -32,22 +35,39 @@ const PostListContainer = () => {
   
   // This function will be passed to both PostForm and PostList
   const refreshPosts = () => {
-    console.log("Refreshing posts with buddyOnly:", buddyOnly);
-    refetch({ buddyOnly }); // Pass the current buddyOnly state in the refetch
+    console.log("Refreshing posts with buddyOnly:", buddyOnly, "locationFilter:", locationFilter);
+    refetch({ buddyOnly, locationFilter }); // Pass the current filters in the refetch
   };
   
   // Toggle between all posts and buddy-only posts
   const toggleBuddyFeed = () => {
     setBuddyOnly(prevState => !prevState);
   };
+  
+  // Handler for location filter results
+  const handleLocationFilteredPosts = (posts) => {
+    setFilteredPosts(posts);
+    
+    // If null is passed, clear the location filter
+    if (posts === null) {
+      setLocationFilter(null);
+      refreshPosts();
+    }
+  };
 
   return (
     <>
       <PostForm refetchPosts={refreshPosts} />
       
+      {/* Location Filter */}
+      <LocationFilter onPostsLoaded={handleLocationFilteredPosts} buddyOnly={buddyOnly} />
+      
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-fairway-800 mb-4">Feed View</h2>
+          <h2 className="text-xl font-semibold text-fairway-800 mb-4">
+            Feed View
+            {locationFilter && <span className="ml-2 text-sm font-normal text-gray-600">(Location Filtered)</span>}
+          </h2>
           <div className="flex flex-col items-center">
             <div className="inline-flex rounded-md shadow-sm" role="group">
               <button
@@ -105,23 +125,34 @@ const PostListContainer = () => {
         </div>
       ) : (
         <div>
-          {(data?.posts || []).length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
-              No posts yet. Be the first to share your golf experience!
-            </div>
-          ) : (
-            <div>
-              {data.posts.map(post => (
-                <Post 
-                  key={post.id} 
-                  post={post} 
-                  refetchPosts={refreshPosts} 
-                  isTargetPost={post.id === targetPostId}
-                  targetCommentId={post.id === targetPostId ? targetCommentId : null}
-                />
-              ))}
-            </div>
-          )}
+          {/* Use filtered posts if available, otherwise use query data */}
+          {(() => {
+            const postsToRender = filteredPosts !== null ? filteredPosts : (data?.posts?.edges?.map(edge => edge.node) || []);
+            
+            if (postsToRender.length === 0) {
+              return (
+                <div className="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+                  {locationFilter ? 
+                    "No posts found with the current location filter. Try adjusting your filter settings." : 
+                    "No posts yet. Be the first to share your golf experience!"}
+                </div>
+              );
+            } else {
+              return (
+                <div>
+                  {postsToRender.map(post => (
+                    <Post 
+                      key={post.id} 
+                      post={post} 
+                      refetchPosts={refreshPosts} 
+                      isTargetPost={post.id === targetPostId}
+                      targetCommentId={post.id === targetPostId ? targetCommentId : null}
+                    />
+                  ))}
+                </div>
+              );
+            }
+          })()}
         </div>
       )}
     </>

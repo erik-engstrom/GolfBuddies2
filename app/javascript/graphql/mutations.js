@@ -47,8 +47,20 @@ export const SIGN_IN_MUTATION = gql`
 
 // Post mutations
 export const CREATE_POST_MUTATION = gql`
-  mutation CreatePost($content: String!, $buddyOnly: Boolean) {
-    createPost(input: {content: $content, buddyOnly: $buddyOnly}) {
+  mutation CreatePost(
+    $content: String!, 
+    $buddyOnly: Boolean, 
+    $includeLocation: Boolean, 
+    $latitude: Float, 
+    $longitude: Float
+  ) {
+    createPost(input: {
+      content: $content, 
+      buddyOnly: $buddyOnly,
+      includeLocation: $includeLocation,
+      latitude: $latitude,
+      longitude: $longitude
+    }) {
       post {
         id
         content

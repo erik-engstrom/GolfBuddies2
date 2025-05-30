@@ -4,6 +4,24 @@ class User < ApplicationRecord
   # Enums
   enum :playing_style, { fun: 'fun', competitive: 'competitive', social: 'social' }
   
+  # Geocoding configuration
+  geocoded_by :full_address
+  reverse_geocoded_by :latitude, :longitude do |obj, results|
+    if geo = results.first
+      obj.address = geo.address
+      obj.city = geo.city
+      obj.state = geo.state
+      obj.zip_code = geo.postal_code
+      obj.country = geo.country
+    end
+  end
+  
+  # Callbacks for geocoding
+  after_validation :geocode, if: ->(obj) { 
+    obj.address_changed? || obj.city_changed? || obj.state_changed? || obj.zip_code_changed? || obj.country_changed? 
+  }
+  after_validation :reverse_geocode, if: ->(obj) { obj.latitude_changed? || obj.longitude_changed? }
+  
   # Post and comment associations
   has_many :posts, dependent: :destroy
   has_many :comments, dependent: :destroy
@@ -48,6 +66,11 @@ class User < ApplicationRecord
     received_messages.where(read: false)
       .group(:sender_id)
       .count
+  end
+  
+  # Location helper methods
+  def full_address
+    [address, city, state, zip_code, country].compact.join(', ')
   end
   
   # Notifications

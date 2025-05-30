@@ -9,6 +9,15 @@ module Types
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     
+    # Location fields
+    field :latitude, Float, null: true
+    field :longitude, Float, null: true
+    field :address, String, null: true
+    field :city, String, null: true
+    field :state, String, null: true
+    field :zip_code, String, null: true
+    field :country, String, null: true
+    
     # Add associations
     field :posts, [Types::PostType], null: false
     field :comments, [Types::CommentType], null: false
@@ -17,6 +26,7 @@ module Types
     
     # Custom fields
     field :full_name, String, null: false
+    field :username, String, null: false
     field :profile_picture_url, String, null: true
     field :unread_messages_count, Integer, null: false
     field :unread_messages_count_by_buddy, GraphQL::Types::JSON, null: false
@@ -33,6 +43,11 @@ module Types
     
     def full_name
       "#{object.first_name} #{object.last_name}"
+    end
+    
+    def username
+      # Generate a username from first name and last name
+      "#{object.first_name.downcase}#{object.last_name.downcase}"
     end
     
     def profile_picture_url

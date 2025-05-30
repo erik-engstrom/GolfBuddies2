@@ -12,6 +12,66 @@ import { CurrentUserContext } from '../../app/CurrentUserContext';
 import CommentsSection from './CommentsSection';
 import EditPostModal from './EditPostModal';
 import DeletePostConfirmation from './DeletePostConfirmation';
+import { FaMapMarkerAlt } from 'react-icons/fa';
+
+const LocationInfo = memo(({ post }) => {
+  if (!post.latitude && !post.longitude && !post.city && !post.zipCode) {
+    return null; // No location info to display
+  }
+  
+  const hasCoordinates = post.latitude && post.longitude;
+  const hasAddress = post.city || post.zipCode;
+  
+  // Generate location display
+  let locationDisplay = '';
+  
+  if (post.city && post.state) {
+    locationDisplay = `${post.city}, ${post.state}`;
+  } else if (post.city) {
+    locationDisplay = post.city;
+  } else if (post.zipCode) {
+    locationDisplay = `ZIP: ${post.zipCode}`;
+  }
+  
+  // Include country if it's provided and not local
+  if (post.country && post.country !== 'United States') {
+    locationDisplay = locationDisplay ? `${locationDisplay}, ${post.country}` : post.country;
+  }
+  
+  // Format distance display if present
+  const distanceDisplay = post.distance !== null && post.distance !== undefined 
+    ? `${Number(post.distance).toFixed(1)} miles away`
+    : '';
+    
+  // Create Google Maps link for coordinates
+  const mapsUrl = hasCoordinates
+    ? `https://www.google.com/maps/search/?api=1&query=${post.latitude},${post.longitude}`
+    : hasAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDisplay)}` : null;
+  
+  return (
+    <div className="mt-2 flex items-center text-xs text-gray-600">
+      <FaMapMarkerAlt className="mr-1 text-red-500" />
+      {mapsUrl ? (
+        <a 
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:underline"
+        >
+          {locationDisplay}
+          {distanceDisplay && ` (${distanceDisplay})`}
+        </a>
+      ) : (
+        <span>
+          {locationDisplay}
+          {distanceDisplay && ` (${distanceDisplay})`}
+        </span>
+      )}
+    </div>
+  );
+});
+
+LocationInfo.displayName = 'LocationInfo';
 
 const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null }) => {
   const { currentUser } = useContext(CurrentUserContext);
@@ -329,6 +389,7 @@ const Post = ({ post, refetchPosts, isTargetPost = false, targetCommentId = null
             />
           </div>
         )}
+        <LocationInfo post={post} />
       </div>
       
       <div className="flex border-t border-b py-2 mb-3">

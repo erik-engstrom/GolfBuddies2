@@ -10,8 +10,7 @@ module Types
     def message_received(user_id:)
       # Return the message object if it's valid
       # If object is nil or not a Message, this will likely cause a type error
-      # Since this field is non-nullable, we need to ensure a Message object is returned
-      # or we'll get the "Cannot return null for non-nullable field" error
+      # Since this field is nullable (null: true), we can return nil safely
       
       # In subscriptions, object should be the Message instance being broadcasted
       if object.is_a?(Message)
@@ -19,11 +18,8 @@ module Types
       else
         # Log the issue
         Rails.logger.error "Expected Message but got #{object.class.name || 'nil'} in message_received subscription"
-        
-        # Find a fallback message or raise an error
-        # This is a safety measure to prevent GraphQL null errors
-        Message.where(receiver_id: user_id).last || 
-          raise(GraphQL::ExecutionError, "No message available for subscription")
+        # Return nil instead of trying to find a fallback message
+        nil
       end
     end
     
@@ -40,11 +36,8 @@ module Types
       else
         # Log the issue
         Rails.logger.error "Expected Message but got #{object.class.name || 'nil'} in message_read_status_updated subscription"
-        
-        # Find a fallback message or raise an error
-        # This is a safety measure to prevent GraphQL null errors
-        Message.where(receiver_id: user_id).last || 
-          raise(GraphQL::ExecutionError, "No message available for subscription")
+        # Return nil instead of trying to find a fallback message
+        nil
       end
     end
   end

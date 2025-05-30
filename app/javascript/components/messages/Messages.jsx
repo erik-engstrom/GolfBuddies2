@@ -537,16 +537,20 @@ const Messages = ({ currentUser: propCurrentUser }) => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-
-      <MessageSubscription
-        userId={currentUser.id}
-        onNewMessage={(newMessage) => {
+    <div className="max-w-6xl mx-auto">        <MessageSubscription
+          userId={currentUser.id}
+          onNewMessage={(newMessage) => {
             // Handle reconnection events
             if (newMessage.type === 'reconnect') {
               console.log('Reconnection event received, refetching data...');
               // Force refetch messages and buddies to reset the subscription
               refetchMessages();
+              return;
+            }
+            
+            // Handle null or invalid messages
+            if (!newMessage || !newMessage.sender || !newMessage.receiver) {
+              console.log('Received null or invalid message, skipping processing');
               return;
             }
             
